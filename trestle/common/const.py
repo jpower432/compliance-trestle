@@ -370,6 +370,10 @@ REMARKS = 'Remarks'
 
 STATUS_REMARKS = 'status-remarks'
 
+PROVIDED_STATEMENT_DESCRIPTION = 'Provided Statement Description'
+
+RESPONSIBILITY_STATEMENT_DESCRIPTION = 'Responsibility Statement Description'
+
 # Following 5 are allowed state tokens for
 # SSP -> ControlImplementation -> ImplementedRequirements -> ByComponents -> common.ImplementationStatus -> State
 # Also                         -> ImplementedRequirements -> Statements -> ByComponents ...
@@ -431,6 +435,8 @@ RULES_PARAMS_TAG = TRESTLE_TAG + 'rules-params'
 
 COMP_DEF_RULES_PARAM_VALS_TAG = TRESTLE_TAG + 'comp-def-rules-param-vals'
 
+TRESTLE_LEVERAGING_COMP_TAG = TRESTLE_TAG + 'leveraging-comp'
+
 PARAM_VALUES_TAG = TRESTLE_TAG + 'param-values'
 
 COMP_DEF_RULES_TAG = TRESTLE_TAG + 'comp-def-rules'
@@ -464,6 +470,10 @@ CONTROL_STATEMENT_HEADER = '## Control Statement'
 CONTROL_HEADER = '## Control'
 
 REPLACE_ME = 'REPLACE_ME'
+
+PROVIDED_UUID = 'provided-uuid'
+
+RESPONSIBILITY_UUID = 'responsibility-uuid'
 
 YAML_PROPS_COMMENT = """  # Add or modify control properties here
   # Properties may be at the control or part level
@@ -526,6 +536,13 @@ YAML_RULE_PARAM_VALUES_COMPONENT_COMMENT = """  # You may set new values for rul
   #
 """
 
+YAML_LEVERAGED_COMMENT = """  # Add or modify leveraged SSP Statements here.
+"""
+
+YAML_LEVERAGING_COMP_COMMENT = """  # Leveraged statements can be optionally associated with components in this system.
+  # Associate leveraged statements to Components of this system here:
+"""
+
 DISPLAY_NAME = 'display-name'
 
 TRESTLE_GENERIC_NS = 'https://ibm.github.io/compliance-trestle/schemas/oscal'
@@ -566,6 +583,8 @@ IMPLEMENTED_REQUIREMENT = 'implemented-requirement'
 ORIGINATION_ORGANIZATION = 'organization'
 
 ORIGINATION_SYSTEM_SPECIFIC = 'system-specific'
+
+TRESTLE_STATEMENT_TAG = TRESTLE_TAG + 'statement'
 
 ORIGINATION_CUSTOMER_CONFIGURED = 'customer-configured'
 
