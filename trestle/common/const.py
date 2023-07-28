@@ -437,6 +437,8 @@ COMP_DEF_RULES_PARAM_VALS_TAG = TRESTLE_TAG + 'comp-def-rules-param-vals'
 
 TRESTLE_LEVERAGING_COMP_TAG = TRESTLE_TAG + 'leveraging-comp'
 
+TRESTLE_STATEMENT_TAG = TRESTLE_TAG + 'statement'
+
 PARAM_VALUES_TAG = TRESTLE_TAG + 'param-values'
 
 COMP_DEF_RULES_TAG = TRESTLE_TAG + 'comp-def-rules'
@@ -584,10 +586,14 @@ ORIGINATION_ORGANIZATION = 'organization'
 
 ORIGINATION_SYSTEM_SPECIFIC = 'system-specific'
 
-TRESTLE_STATEMENT_TAG = TRESTLE_TAG + 'statement'
-
 ORIGINATION_CUSTOMER_CONFIGURED = 'customer-configured'
 
 ORIGINATION_CUSTOMER_PROVIDED = 'customer-provided'
 
 ORIGINATION_INHERITED = 'inherited'
+
+# Constant relation to the inheritance view Markdown
+
+INHERITANCE_VIEW_DIR = 'inheritance'
+
+HELP_LEVERAGED = 'Name of the SSP to be leveraged.'
