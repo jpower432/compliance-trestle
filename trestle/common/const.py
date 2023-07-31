@@ -421,6 +421,11 @@ STATUS_PROMPT = f'<!-- For implementation status enter one of: {STATUS_IMPLEMENT
 
 RULES_WARNING = '<!-- Note that the list of rules under ### Rules: is read-only and changes will not be captured after assembly to JSON -->'  # noqa E501
 
+SATISFIED_STATEMENT_COMMENT = (
+    '<!-- Use this section to explain how'
+    ' the inherited responsibility is being satisfied. -->'
+)
+
 THIS_SYSTEM_PROMPT = '### ' + SSP_MAIN_COMP_NAME
 
 RESPONSIBLE_ROLE = 'responsible-role'
@@ -597,3 +602,5 @@ ORIGINATION_INHERITED = 'inherited'
 INHERITANCE_VIEW_DIR = 'inheritance'
 
 HELP_LEVERAGED = 'Name of the SSP to be leveraged.'
+
+SATISFIED_STATEMENT_DESCRIPTION = 'Satisfied Statement Description'
