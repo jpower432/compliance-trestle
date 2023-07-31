@@ -305,7 +305,8 @@ In the context of the application component in satisfaction of AC-2.1."""
 
 Leveraging system's responsibilities with respect to inheriting this capability.
 
-In the context of the application component in satisfaction of AC-2, part a."""
+In the context of the application component in satisfaction of AC-2, part a.
+"""
 
     # Confirm markdown content
     node = tree.get_node_for_key(const.RESPONSIBILITY_STATEMENT_DESCRIPTION, False)
@@ -339,7 +340,8 @@ In the context of the application component in satisfaction of AC-2, part a.
 
 Leveraging system's responsibilities with respect to inheriting this capability.
 
-In the context of the application component in satisfaction of AC-2, part a."""
+In the context of the application component in satisfaction of AC-2, part a.
+"""
 
     # Confirm markdown content
     node = tree.get_node_for_key(const.PROVIDED_STATEMENT_DESCRIPTION, False)

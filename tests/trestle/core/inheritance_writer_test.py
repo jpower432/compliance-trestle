@@ -25,6 +25,7 @@ provided_uuid = '18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114'
 provided_statement_desc = 'provided statement description'
 resp_uuid = '4b34c68f-75fa-4b38-baf0-e50158c13ac2'
 resp_statement_desc = 'resp statement description'
+satisfied_statement_desc = 'satisfied statement description'
 
 
 def test_write_inheritance_tree(tmp_path: pathlib.Path) -> None:
@@ -47,7 +48,12 @@ def test_write_inheritance_tree(tmp_path: pathlib.Path) -> None:
     node = tree.get_node_for_key(const.PROVIDED_STATEMENT_DESCRIPTION, False)
     assert node.content.raw_text == '# Provided Statement Description\n\nprovided statement description\n'
     node = tree.get_node_for_key(const.RESPONSIBILITY_STATEMENT_DESCRIPTION, False)
-    assert node.content.raw_text == '# Responsibility Statement Description\n\nresp statement description'
+    assert node.content.raw_text == '# Responsibility Statement Description\n\nresp statement description\n'
+    node = tree.get_node_for_key(const.SATISFIED_STATEMENT_DESCRIPTION, False)
+    assert node.content.raw_text == (
+        '# Satisfied Statement Description\n\n<!-- Use this section to explain '
+        'how the inherited responsibility is being satisfied. -->\nREPLACE_ME'
+    )
 
 
 def test_write_inheritance_provided(tmp_path: pathlib.Path) -> None:
@@ -87,4 +93,8 @@ def test_write_inheritance_responsibility(tmp_path: pathlib.Path) -> None:
 
     # Confirm markdown content
     node = tree.get_node_for_key(const.RESPONSIBILITY_STATEMENT_DESCRIPTION, False)
-    assert node.content.raw_text == '# Responsibility Statement Description\n\nresp statement description'
+    assert node.content.raw_text == '# Responsibility Statement Description\n\nresp statement description\n'
+    node = tree.get_node_for_key(const.SATISFIED_STATEMENT_DESCRIPTION, False)
+    assert node.content.raw_text == """# Satisfied Statement Description\n
+<!-- Use this section to explain how the inherited responsibility is being satisfied. -->
+REPLACE_ME"""

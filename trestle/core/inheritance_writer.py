@@ -45,13 +45,18 @@ class StatementTree(LeveragedStatements):
     """Concrete class for managing provided and responsibility statements."""
 
     def __init__(
-        self, provided_uuid: str, provided_description: str, responsibility_uuid: str, responsibility_description: str
+        self,
+        provided_uuid: str,
+        provided_description: str,
+        responsibility_uuid: str,
+        responsibility_description: str,
     ):
         """Initialize the class."""
         self.provided_uuid = provided_uuid
         self.provided_description = provided_description
         self.responsibility_uuid = responsibility_uuid
         self.responsibility_description = responsibility_description
+        self.satisfied_description = const.REPLACE_ME
         super().__init__()
 
     def write_statement_md(self, leveraged_statement_file: pathlib.Path) -> None:
@@ -69,6 +74,9 @@ class StatementTree(LeveragedStatements):
         self._md_file.new_line(self.provided_description)
         self._md_file.new_header(level=1, title=const.RESPONSIBILITY_STATEMENT_DESCRIPTION)
         self._md_file.new_line(self.responsibility_description)
+        self._md_file.new_header(level=1, title=const.SATISFIED_STATEMENT_DESCRIPTION)
+        self._md_file.new_line(const.SATISFIED_STATEMENT_COMMENT)
+        self._md_file.new_line(self.satisfied_description)
 
         self._md_file.write_out()
 
@@ -91,7 +99,6 @@ class StatementProvided(LeveragedStatements):
 
         self._md_file.new_header(level=1, title=const.PROVIDED_STATEMENT_DESCRIPTION)
         self._md_file.new_line(self.provided_description)
-
         self._md_file.write_out()
 
 
@@ -102,6 +109,8 @@ class StatementResponsibility(LeveragedStatements):
         """Initialize the class."""
         self.responsibility_uuid = responsibility_uuid
         self.responsibility_description = responsibility_description
+        self.satisfied_description = const.REPLACE_ME
+
         super().__init__()
 
     def write_statement_md(self, leveraged_statement_file: pathlib.Path) -> None:
@@ -113,5 +122,8 @@ class StatementResponsibility(LeveragedStatements):
 
         self._md_file.new_header(level=1, title=const.RESPONSIBILITY_STATEMENT_DESCRIPTION)
         self._md_file.new_line(self.responsibility_description)
+        self._md_file.new_header(level=1, title=const.SATISFIED_STATEMENT_DESCRIPTION)
+        self._md_file.new_line(const.SATISFIED_STATEMENT_COMMENT)
+        self._md_file.new_line(self.satisfied_description)
 
         self._md_file.write_out()
