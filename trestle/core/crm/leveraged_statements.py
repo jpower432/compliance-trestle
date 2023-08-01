@@ -231,7 +231,7 @@ class InheritanceMarkdownReader:
 
             provided_description = self.get_provided_description()
             if provided_description is None:
-                raise TrestleError(f'Provided statement cannot be empty in {self.leveraged_statement_file}')
+                raise TrestleError(f'Provided statement cannot be empty in {self._leveraged_statement_file}')
 
             inherited_statement = gens.generate_sample_model(ssp.Inherited)
 
@@ -242,7 +242,7 @@ class InheritanceMarkdownReader:
             # Set satisfied
             satisfied_description = self.get_satisfied_description()
             if satisfied_description is None:
-                raise TrestleError(f'Satisfied statement cannot be empty in {self.leveraged_statement_file}')
+                raise TrestleError(f'Satisfied statement cannot be empty in {self._leveraged_statement_file}')
 
             satisfied_statement = gens.generate_sample_model(ssp.Satisfied)
 
