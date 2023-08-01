@@ -23,7 +23,7 @@ import trestle.oscal.ssp as ossp
 from trestle.common.err import TrestleError
 from trestle.common.list_utils import as_list
 from trestle.core.crm.export_interface import ExportInterface
-from trestle.core.inheritance_writer import (
+from trestle.core.crm.leveraged_statements import (
     LeveragedStatements,
     StatementProvided,
     StatementResponsibility,
@@ -35,9 +35,9 @@ logger = logging.getLogger(__name__)
 
 class ExportWriter:
     """
-    Exported writer.
+    By-Component Assembly Exports writer.
 
-    Export writer handles all operation related writing provided and responsibility exported statements
+    Export writer handles all operations related to writing provided and responsibility exported statements
     to Markdown.
     """
 

@@ -28,7 +28,7 @@ class ExportInterface:
     """
     Interface to query exported provided and responsibility statements from.
 
-    The by-component export statement is parse and the responsibility and provided statement
+    The by-component export statement is parsed and the responsibility and provided statements
     are separated into three catagories:
 
     isolated responsibilities - A responsibility with no provided statement
