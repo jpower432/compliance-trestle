@@ -55,7 +55,7 @@ class ExportWriter:
     def write_exports_as_markdown(self) -> None:
         """Write export statement for leveraged SSP as the inheritance Markdown view."""
         # Find all the components and create paths for name
-        paths_by_comp: Dict[uuid.UUD, pathlib.Path] = {}
+        paths_by_comp: Dict[uuid.UUID, pathlib.Path] = {}
         for component in as_list(self._ssp.system_implementation.components):
             paths_by_comp[component.uuid] = self._root_path.joinpath(component.title)
 
