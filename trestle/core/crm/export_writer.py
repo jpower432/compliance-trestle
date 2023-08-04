@@ -49,8 +49,8 @@ class ExportWriter:
             root_path: A root path object where all markdown files and directories should be written.
             ssp: A system security plan with exports
         """
-        self._ssp = ssp
-        self._root_path = root_path
+        self._ssp: ossp.SystemSecurityPlan = ssp
+        self._root_path: pathlib.Path = root_path
 
     def write_exports_as_markdown(self) -> None:
         """Write export statement for leveraged SSP as the inheritance Markdown view."""
@@ -100,18 +100,16 @@ class ExportWriter:
         all_statements: Dict[str, LeveragedStatements] = {}
 
         for responsibility in export_interface.get_isolated_responsibilities():
-            responsibility_stm = StatementResponsibility(responsibility.uuid, responsibility.description)
-            all_statements[responsibility.uuid] = responsibility_stm
+            all_statements[responsibility.uuid
+                           ] = StatementResponsibility(responsibility.uuid, responsibility.description)
 
         for provided in export_interface.get_isolated_provided():
-            provided_stm = StatementProvided(provided.uuid, provided.description)
-            all_statements[provided.uuid] = provided_stm
+            all_statements[provided.uuid] = StatementProvided(provided.uuid, provided.description)
 
         for responsibility, provided in export_interface.get_export_sets():
-            set_stm = StatementTree(
+            path = f'{provided.uuid}_{responsibility.uuid}'
+            all_statements[path] = StatementTree(
                 provided.uuid, provided.description, responsibility.uuid, responsibility.description
             )
-            path = f'{provided.uuid}_{responsibility.uuid}'
-            all_statements[path] = set_stm
 
         return all_statements

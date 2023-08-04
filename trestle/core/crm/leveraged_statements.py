@@ -87,7 +87,7 @@ class StatementTree(LeveragedStatements):
         self._add_generated_content()
         self._md_file.write_out()
 
-    def _add_generated_content(self):
+    def _add_generated_content(self) -> None:
         statement_dict: Dict[str, str] = {
             const.PROVIDED_UUID: self.provided_uuid, const.RESPONSIBILITY_UUID: self.responsibility_uuid
         }
@@ -132,7 +132,7 @@ class StatementProvided(LeveragedStatements):
         self._add_generated_content()
         self._md_file.write_out()
 
-    def _add_generated_content(self):
+    def _add_generated_content(self) -> None:
         self.merged_header_dict[const.TRESTLE_STATEMENT_TAG] = {const.PROVIDED_UUID: self.provided_uuid}
         self._md_file.add_yaml_header(self.merged_header_dict)
 
@@ -173,7 +173,7 @@ class StatementResponsibility(LeveragedStatements):
         self._add_generated_content()
         self._md_file.write_out()
 
-    def _add_generated_content(self):
+    def _add_generated_content(self) -> None:
         self.merged_header_dict[const.TRESTLE_STATEMENT_TAG] = {const.RESPONSIBILITY_UUID: self.responsibility_uuid}
         self._md_file.add_yaml_header(self.merged_header_dict)
 
