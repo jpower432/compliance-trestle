@@ -170,8 +170,8 @@ def test_write_inheritance_responsibility(tmp_path: pathlib.Path) -> None:
 <!-- Use this section to explain how the inherited responsibility is being satisfied. -->\nMy Satisfied Description"""
 
 
-def test_process_leveraging_statement_default_mapping(tmp_path: pathlib.Path) -> None:
-    """Test processing a leveraging statement markdown with no set mapping."""
+def test_process_leveraged_statement_default_mapping(tmp_path: pathlib.Path) -> None:
+    """Test processing leveraged statement markdown with no set mapping."""
     statement_tree_path = tmp_path.joinpath('statement_tree.md')
 
     statement = StatementTree(provided_uuid, provided_statement_desc, resp_uuid, resp_statement_desc)
