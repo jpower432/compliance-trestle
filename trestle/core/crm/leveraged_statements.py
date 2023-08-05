@@ -205,10 +205,15 @@ class InheritanceMarkdownReader:
         Read inheritance information from Markdown.
 
         Returns:
-        Tuple: An list of mapped component titles, a satisfied statement and an inherited statement
+        Optional Tuple: A list of mapped component titles, an optional satisfied statement and an optional
+        inherited statement
 
         Notes:
-            Returns inheritance information in the context of the leveraging SSP.
+            Returns inheritance information in the context of the leveraging SSP. If no leveraging component titles are
+            mapped in the yaml header None will be returned. The satisfied and inherited fields are
+            generated and returned to added information to by-component assemblies for
+            the mapped leveraging components.
+
         """
         leveraging_comps: List[str] = []
         inherited_statement: Optional[ssp.Inherited] = None
