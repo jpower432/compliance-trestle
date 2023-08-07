@@ -16,7 +16,8 @@ import logging
 import pathlib
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 import trestle.common.const as const
 import trestle.core.generators as gens
@@ -34,7 +35,7 @@ component_mapping_default: List[Dict[str, str]] = [{'name': const.REPLACE_ME}]
 class LeveragedStatements(ABC):
     """Abstract class for managing leveraged statements."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the class."""
         self._md_file: Optional[MDWriter] = None
         self.header_comment_dict: Dict[str, str] = {
@@ -184,10 +185,19 @@ class StatementResponsibility(LeveragedStatements):
         self._md_file.new_line(self.satisfied_description)
 
 
+@dataclass
+class InheritanceInfo:
+    """Class to capture component inheritance information."""
+
+    leveraging_comp_titles: List[str]
+    inherited: Optional[ssp.Inherited]
+    satisfied: Optional[ssp.Satisfied]
+
+
 class InheritanceMarkdownReader:
     """Class to read leveraged statement information from Markdown."""
 
-    def __init__(self, leveraged_statement_file: str):
+    def __init__(self, leveraged_statement_file: str) -> None:
         """Initialize the class."""
         # Save the file name for logging
         self._leveraged_statement_file = leveraged_statement_file
@@ -198,14 +208,12 @@ class InheritanceMarkdownReader:
         self._yaml_header: Dict[str, Any] = yaml_header
         self._inheritance_md: DocsMarkdownNode = inheritance_md
 
-    def process_leveraged_statement_markdown(
-        self
-    ) -> Optional[Tuple[List[str], Optional[ssp.Inherited], Optional[ssp.Satisfied]]]:
+    def process_leveraged_statement_markdown(self) -> Optional[InheritanceInfo]:
         """
         Read inheritance information from Markdown.
 
         Returns:
-        Optional Tuple: A list of mapped component titles, an optional satisfied statement and an optional
+        Optional InheritanceInfo: A list of mapped component titles, an optional satisfied statement and an optional
         inherited statement
 
         Notes:
@@ -254,7 +262,7 @@ class InheritanceMarkdownReader:
             satisfied_statement.description = satisfied_description
             satisfied_statement.responsibility_uuid = statement_info[const.RESPONSIBILITY_UUID]
 
-        return (leveraging_comps, inherited_statement, satisfied_statement)
+        return InheritanceInfo(leveraging_comps, inherited_statement, satisfied_statement)
 
     def get_satisfied_description(self) -> Optional[str]:
         """Return the satisfied description in the Markdown."""

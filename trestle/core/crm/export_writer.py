@@ -70,7 +70,7 @@ class ExportWriter:
 
             for stm in as_list(implemented_requirement.statements):
                 statement_id = getattr(stm, 'statement_id', f'{implemented_requirement.control_id}_smt')
-                for by_comp in stm.by_components:
+                for by_comp in as_list(stm.by_components):
                     try:
                         comp_markdown_path: pathlib.Path = paths_by_comp[by_comp.component_uuid]
                         self._process_by_component(by_comp, comp_markdown_path, statement_id)
