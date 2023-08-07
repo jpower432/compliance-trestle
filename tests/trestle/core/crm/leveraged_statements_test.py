@@ -201,15 +201,17 @@ def test_process_leveraged_statement_markdown_tree(tmp_path: pathlib.Path) -> No
 
     leveraging_information = md_reader.process_leveraged_statement_markdown()
 
-    assert 'My_Comp' in leveraging_information[0]
+    assert leveraging_information
 
-    assert leveraging_information[1] is not None
-    inherited = leveraging_information[1]
+    assert 'My_Comp' in leveraging_information.leveraging_comp_titles
+
+    assert leveraging_information.inherited is not None
+    inherited = leveraging_information.inherited
     assert inherited.provided_uuid == provided_uuid
     assert inherited.description == provided_statement_desc
 
-    assert leveraging_information[2] is not None
-    satisfied = leveraging_information[2]
+    assert leveraging_information.satisfied is not None
+    satisfied = leveraging_information.satisfied
     assert satisfied.responsibility_uuid == resp_uuid
     assert satisfied.description == 'My Satisfied Description'
 
@@ -230,14 +232,16 @@ def test_process_leveraged_statement_markdown_provided(tmp_path: pathlib.Path) -
 
     leveraging_information = md_reader.process_leveraged_statement_markdown()
 
-    assert 'My_Comp' in leveraging_information[0]
+    assert leveraging_information
 
-    assert leveraging_information[1] is not None
-    inherited = leveraging_information[1]
+    assert 'My_Comp' in leveraging_information.leveraging_comp_titles
+
+    assert leveraging_information.inherited is not None
+    inherited = leveraging_information.inherited
     assert inherited.provided_uuid == provided_uuid
     assert inherited.description == provided_statement_desc
 
-    assert leveraging_information[2] is None
+    assert leveraging_information.satisfied is None
 
 
 def test_process_leveraged_statement_markdown_responsibility(tmp_path: pathlib.Path) -> None:
@@ -256,11 +260,13 @@ def test_process_leveraged_statement_markdown_responsibility(tmp_path: pathlib.P
 
     leveraging_information = md_reader.process_leveraged_statement_markdown()
 
-    assert 'My_Comp' in leveraging_information[0]
+    assert leveraging_information
 
-    assert leveraging_information[1] is None
+    assert 'My_Comp' in leveraging_information.leveraging_comp_titles
 
-    assert leveraging_information[2] is not None
-    satisfied = leveraging_information[2]
+    assert leveraging_information.inherited is None
+
+    assert leveraging_information.satisfied is not None
+    satisfied = leveraging_information.satisfied
     assert satisfied.responsibility_uuid == resp_uuid
     assert satisfied.description == 'My Satisfied Description'
