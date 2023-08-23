@@ -356,16 +356,15 @@ class CatalogReader():
             know controlid and comp name in comp_dict
         """
         for group_path in CatalogInterface._get_group_ids_and_dirs(md_path).values():
-
             for control_file in group_path.glob('*.md'):
-                flag = False
+                skip = False
                 for file in control_file.parents:
-                    if file.name == 'inheritance':
-                        flag = True
-                        continue
-                        #raise TrestleError('Inheritance is not supported in catalog markdown files.')
-                if flag:
+                    if file.name == const.INHERITANCE_VIEW_DIR:
+                        skip = True
+                        break
+                if skip:
                     continue
+                
                 control_id = control_file.stem
 
                 md_header, control_comp_dict = CatalogReader._read_comp_info_from_md(control_file, context)
