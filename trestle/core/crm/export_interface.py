@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Provide interface to ssp allowing queries and operations for exports statements"""
+"""Provide interface to ssp allowing queries and operations for exports statements."""
 
 import logging
-import uuid
 from typing import Dict, List, Tuple
 
 import trestle.oscal.ssp as ossp
@@ -40,29 +39,29 @@ class ExportInterface:
         """Initialize export writer for a single by-component assembly."""
         self._by_comp: ossp.ByComponent = by_comp
 
-        self._provided_dict: Dict[uuid.UUID, ossp.Provided] = {}
-        self._responsibility_dict: Dict[uuid.UUID, ossp.Responsibility] = {}
-        self._responsibility_by_provided: Dict[uuid.UUID, List[ossp.Responsibility]] = {}
+        self._provided_dict: Dict[str, ossp.Provided] = {}
+        self._responsibility_dict: Dict[str, ossp.Responsibility] = {}
+        self._responsibility_by_provided: Dict[str, List[ossp.Responsibility]] = {}
 
         if by_comp.export:
             self._provided_dict = self._create_provided_dict()
             self._responsibility_dict = self._create_responsibility_dict()
             self._responsibility_by_provided = self._create_responsibility_by_provided_dict()
 
-    def _create_provided_dict(self) -> Dict[uuid.UUID, ossp.Provided]:
-        provided_dict: Dict[uuid.UUID, ossp.Provided] = {}
+    def _create_provided_dict(self) -> Dict[str, ossp.Provided]:
+        provided_dict: Dict[str, ossp.Provided] = {}
         for provided in as_list(self._by_comp.export.provided):
             provided_dict[provided.uuid] = provided
         return provided_dict
 
-    def _create_responsibility_dict(self) -> Dict[uuid.UUID, ossp.Responsibility]:
-        responsibility_dict: Dict[uuid.UUID, ossp.Responsibility] = {}
+    def _create_responsibility_dict(self) -> Dict[str, ossp.Responsibility]:
+        responsibility_dict: Dict[str, ossp.Responsibility] = {}
         for responsibility in as_list(self._by_comp.export.responsibilities):
             responsibility_dict[responsibility.uuid] = responsibility
         return responsibility_dict
 
-    def _create_responsibility_by_provided_dict(self) -> Dict[uuid.UUID, List[ossp.Responsibility]]:
-        responsibility_by_provided: Dict[uuid.UUID, List[ossp.Responsibility]] = {}
+    def _create_responsibility_by_provided_dict(self) -> Dict[str, List[ossp.Responsibility]]:
+        responsibility_by_provided: Dict[str, List[ossp.Responsibility]] = {}
         for responsibility in as_list(self._by_comp.export.responsibilities):
             if responsibility.provided_uuid is None:
                 continue
@@ -107,6 +106,6 @@ class ExportInterface:
                 all_export_sets.append(shared_responsibility)
         return all_export_sets
 
-    def _provided_has_responsibilities(self, provided_uuid: uuid.UUID) -> bool:
+    def _provided_has_responsibilities(self, provided_uuid: str) -> bool:
         """Return whether a provided UUID has responsibilities."""
         return provided_uuid in self._responsibility_by_provided
