@@ -19,15 +19,12 @@ from tests import test_utils
 import trestle.oscal.ssp as ossp
 from trestle.core.crm.export_interface import ExportInterface
 
-test_profile = 'simple_test_profile'
-test_ssp = 'leveraged_ssp'
-
 
 def test_get_isolated_responsibilities() -> None:
     """Test retrieving isolated responsibilities statements."""
     by_comp: ossp.ByComponent = test_utils.generate_test_by_comp()
     expected_responsibility = 1
-    expected_uuid = by_comp.export.responsibilities[0].uuid
+    expected_uuid = by_comp.export.responsibilities[0].uuid  # type: ignore
 
     export_interface: ExportInterface = ExportInterface(by_comp)
 
@@ -41,7 +38,7 @@ def test_get_isolated_provided() -> None:
     """Test retrieving isolated provided statements."""
     by_comp: ossp.ByComponent = test_utils.generate_test_by_comp()
     expected_provided = 1
-    expected_uuid = by_comp.export.provided[0].uuid
+    expected_uuid = by_comp.export.provided[0].uuid  # type: ignore
 
     export_interface: ExportInterface = ExportInterface(by_comp)
 
@@ -55,8 +52,8 @@ def test_get_export_sets() -> None:
     """Test retrieving export set statements."""
     by_comp: ossp.ByComponent = test_utils.generate_test_by_comp()
     expected_set = 1
-    expected_responsibility_uuid = by_comp.export.responsibilities[1].uuid
-    expected_provided_uuid = by_comp.export.provided[1].uuid
+    expected_responsibility_uuid = by_comp.export.responsibilities[1].uuid  # type: ignore
+    expected_provided_uuid = by_comp.export.provided[1].uuid  # type: ignore
 
     export_interface: ExportInterface = ExportInterface(by_comp)
 

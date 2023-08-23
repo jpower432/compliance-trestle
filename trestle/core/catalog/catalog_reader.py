@@ -364,7 +364,7 @@ class CatalogReader():
                         break
                 if skip:
                     continue
-                
+
                 control_id = control_file.stem
 
                 md_header, control_comp_dict = CatalogReader._read_comp_info_from_md(control_file, context)

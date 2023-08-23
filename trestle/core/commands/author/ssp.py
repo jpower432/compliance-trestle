@@ -585,11 +585,11 @@ class SSPAssemble(AuthorCommonCommand):
             # TODO if the ssp already existed then components may need to be removed if not ref'd by imp_reqs
             self._generate_roles_in_metadata(ssp)
 
-            # If this is a leveraging SSP, retrieve the exports from the leveraged SSP
+            # If this is a leveraging SSP, update it with the retrieved the exports from the leveraged SSP
             ipath = pathlib.Path(md_path, const.INHERITANCE_VIEW_DIR)
             if os.path.exists(ipath):
                 reader = ExportReader(ipath, ssp)
-                ssp = reader.read_inheritance()
+                ssp = reader.read_exports_from_markdown()
 
             ssp.import_profile.href = profile_href
 

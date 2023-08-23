@@ -572,7 +572,6 @@ def test_ssp_assemble_w_inhert(tmp_trestle_dir: pathlib.Path) -> None:
     assert ssp_assemble._run(args) == 0
 
 
-
 def test_ssp_filter(tmp_trestle_dir: pathlib.Path) -> None:
     """Test the ssp filter."""
     # FIXME enhance coverage
