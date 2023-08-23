@@ -16,12 +16,13 @@ import os
 import logging
 import pathlib
 import uuid
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 
-from trestle.common.list_utils import as_list
+from trestle.common.list_utils import as_list, none_if_empty
 
 import trestle.oscal.ssp as ossp
 from trestle.core.crm.leveraged_statements import InheritanceMarkdownReader
+from trestle.core.crm.inheritance_interface import InheritanceInterface
 
 logger = logging.getLogger(__name__)
 
@@ -52,16 +53,16 @@ class ExportReader:
         ### For each md file, with the tuple returned form the processor, lookup the component uuid from the component name, add component uuid + leveraged info to dict.
         ## for ea
 
-        impl_requirements: List[ossp.ImplementedRequirement] = self._ssp.control_implementation.implemented_requirements
-
+        impl_requirements: List[ossp.ImplementedRequirement] = []
         markdown_dict: Dict[str, Dict[uuid.UUID, Tuple[List[ossp.Inherited], List[ossp.Satisfied]]]] = {}
 
+        # Creating 
         uuid_by_title: Dict[str, uuid.UUID] = {}
         for component in as_list(self._ssp.system_implementation.components):
             uuid_by_title[component.title] = component.uuid
 
+        # Read data from markdown into the markdown dictionary
         for comp_dir in os.listdir(self._ipath):
-            # print comp_dir variable to stdout
             for control_dir in os.listdir(self._ipath.joinpath(comp_dir)):
                 control_dict: Dict[uuid.UUID, Tuple[List[ossp.Inherited], List[ossp.Satisfied]]] = {}
                 if control_dir in markdown_dict:
@@ -71,7 +72,7 @@ class ExportReader:
                     leveraged_info = reader.process_leveraged_statement_markdown()
                     if leveraged_info is None:
                         continue
-                    for comp in leveraged_info[0]:
+                    for comp in leveraged_info.leveraging_comp_titles:
                         comp_uuid = uuid_by_title[comp]
                         inherited: List[ossp.Inherited] = []
                         satisfied: List[ossp.Satisfied] = []
@@ -79,66 +80,58 @@ class ExportReader:
                             inherited = control_dict[comp_uuid][0]
                             satisfied = control_dict[comp_uuid][1]
 
-                        if leveraged_info[1] is not None:
-                            inherited.append(leveraged_info[1])
-                        if leveraged_info[2] is not None:
-                            satisfied.append(leveraged_info[2])
+                        if leveraged_info.inherited is not None:
+                            inherited.append(leveraged_info.inherited)
+                        if leveraged_info.satisfied is not None:
+                            satisfied.append(leveraged_info.satisfied)
 
                         control_dict[comp_uuid] = (inherited, satisfied)
 
                 markdown_dict[control_dir] = control_dict
 
         # Merge all the implemented requirements in the SSP
-        for implemented_requirement in as_list(impl_requirements):
-            try:
-                control_dict = markdown_dict[implemented_requirement.control_id]
-                for by_comp in as_list(implemented_requirement.by_components):
+        for implemented_requirement in as_list(self._ssp.control_implementation.implemented_requirements):
 
-                    # Might need to check if the lists are empty in the
-                    # comp value
+            new_by_comp: List[ossp.ByComponent] = [] 
+                
+            control_dict = markdown_dict[implemented_requirement.control_id]
+            for by_comp in as_list(implemented_requirement.by_components):
+
+                if by_comp.uuid in control_dict:
                     comp = control_dict[by_comp.uuid]
 
-                    if by_comp.inherited is None:
-                        by_comp.inherited = []
+                    inheritance_interface = InheritanceInterface(by_comp)
+                    by_comp = inheritance_interface.reconcile_inheritance_by_component(comp[0], comp[1])
+                
+                new_by_comp.append(by_comp)
+            
+            implemented_requirement.by_components = new_by_comp
 
-                    by_comp.inherited.extend(comp[0])
-
-                    if by_comp.satisfied is None:
-                        by_comp.satisfied = []
-
-                    by_comp.inherited.extend(comp[0])
-
-            except KeyError as e:
-                # There is going to be a key error if we check on components
-                # or statements that don't exist in the dictionary. You can check
-                # in the top logic or handle it the thrown exception
-                logger.debug(f'{e}')
+            new_statements: List[ossp.Statement] = []
 
             for stm in as_list(implemented_requirement.statements):
                 statement_id = getattr(stm, 'statement_id', f'{implemented_requirement.control_id}_smt')
-                try:
-                    control_dict = markdown_dict[statement_id]
-                    for by_comp in as_list(stm.by_components):
 
-                        # Might need to check if the lists are empty in the
-                        # comp value
+                new_by_comp: List[ossp.ByComponent] = []
+
+                control_dict = markdown_dict[statement_id]
+                for by_comp in as_list(stm.by_components):
+
+                    if by_comp.uuid in control_dict:
                         comp = control_dict[by_comp.uuid]
 
-                        if by_comp.inherited is None:
-                            by_comp.inherited = []
+                        inheritance_interface = InheritanceInterface(by_comp)
+                        inheritance_interface.reconcile_inheritance_by_component(comp[0], comp[1])
 
-                        by_comp.inherited.extend(comp[0])
-
-                        if by_comp.satisfied is None:
-                            by_comp.satisfied = []
-
-                        by_comp.inherited.extend(comp[0])
-
-                except KeyError as e:
-                    # There is going to be a key error if we check on components
-                    # or statements that don't exist in the dictionary. You can check
-                    # in the top logic or handle it the thrown exception
-                    logging.debug(f'{e}')
+                    new_by_comp.append(by_comp)
+                
+                stm.by_components = new_by_comp
+                new_statements.append(stm)
+            
+            implemented_requirement.statements = none_if_empty(new_statements)
+            impl_requirements.append(implemented_requirement)
 
         self._ssp.control_implementation.implemented_requirements = impl_requirements
         return self._ssp
+    
+    
