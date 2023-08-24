@@ -21,7 +21,7 @@ import trestle.common.const as const
 import trestle.oscal.ssp as ossp
 from trestle.common.err import TrestleError
 from trestle.common.list_utils import as_list
-from trestle.core.crm.export_interface import ExportInterface
+from trestle.core.crm.bycomp_interface import ByComponentInterface
 from trestle.core.crm.leveraged_statements import (
     LeveragedStatements,
     StatementProvided,
@@ -78,7 +78,7 @@ class ExportWriter:
 
     def _process_by_component(self, by_comp: ossp.ByComponent, comp_path: pathlib.Path, control_id: str) -> None:
         """Complete the Markdown writing operations for each by-component assembly."""
-        export_interface: ExportInterface = ExportInterface(by_comp=by_comp)
+        export_interface: ByComponentInterface = ByComponentInterface(by_comp=by_comp)
 
         leveraged_statements: Dict[str, LeveragedStatements] = self._statement_types_from_exports(export_interface)
 
@@ -94,7 +94,7 @@ class ExportWriter:
             statement_path: pathlib.Path = control_path.joinpath(f'{statement_file_path}{const.MARKDOWN_FILE_EXT}')
             leveraged_stm.write_statement_md(statement_path)
 
-    def _statement_types_from_exports(self, export_interface: ExportInterface) -> Dict[str, LeveragedStatements]:
+    def _statement_types_from_exports(self, export_interface: ByComponentInterface) -> Dict[str, LeveragedStatements]:
         """Process all exports and return a file basename and LeveragedStatement object for each."""
         all_statements: Dict[str, LeveragedStatements] = {}
 
