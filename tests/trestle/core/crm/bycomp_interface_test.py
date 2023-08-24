@@ -12,16 +12,63 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for the InheritanceInterface class."""
+"""Tests for the ByComponentInterface class."""
 
 from tests import test_utils
 
 import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
-from trestle.core.crm.inheritance_interface import InheritanceInterface
+from trestle.core.crm.bycomp_interface import ByComponentInterface
 
 test_provided_uuid = '18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114'
 test_responsibility_uuid = '4b34c68f-75fa-4b38-baf0-e50158c13ac2'
+
+
+def test_get_isolated_responsibilities() -> None:
+    """Test retrieving isolated responsibilities statements."""
+    by_comp: ossp.ByComponent = test_utils.generate_test_by_comp()
+    expected_responsibility = 1
+    expected_uuid = by_comp.export.responsibilities[0].uuid  # type: ignore
+
+    bycomp_interface: ByComponentInterface = ByComponentInterface(by_comp)
+
+    result = bycomp_interface.get_isolated_responsibilities()
+
+    assert len(result) == expected_responsibility
+    assert result[0].uuid == expected_uuid
+
+
+def test_get_isolated_provided() -> None:
+    """Test retrieving isolated provided statements."""
+    by_comp: ossp.ByComponent = test_utils.generate_test_by_comp()
+    expected_provided = 1
+    expected_uuid = by_comp.export.provided[0].uuid  # type: ignore
+
+    bycomp_interface: ByComponentInterface = ByComponentInterface(by_comp)
+
+    result = bycomp_interface.get_isolated_provided()
+
+    assert len(result) == expected_provided
+    assert result[0].uuid == expected_uuid
+
+
+def test_get_export_sets() -> None:
+    """Test retrieving export set statements."""
+    by_comp: ossp.ByComponent = test_utils.generate_test_by_comp()
+    expected_set = 1
+    expected_responsibility_uuid = by_comp.export.responsibilities[1].uuid  # type: ignore
+    expected_provided_uuid = by_comp.export.provided[1].uuid  # type: ignore
+
+    bycomp_interface: ByComponentInterface = ByComponentInterface(by_comp)
+
+    result = bycomp_interface.get_export_sets()
+
+    result_set = result[0]
+
+    assert len(result) == expected_set
+    assert result_set[0].uuid == expected_responsibility_uuid
+    assert result_set[0].provided_uuid == expected_provided_uuid
+    assert result_set[1].uuid == expected_provided_uuid
 
 
 def test_reconcile_inheritance_by_component() -> None:
@@ -41,7 +88,7 @@ def test_reconcile_inheritance_by_component() -> None:
     by_comp.inherited.append(inherited)
     by_comp.satisfied.append(satisfied)
 
-    inheritance_interface: InheritanceInterface = InheritanceInterface(by_comp)
+    bycomp_interface: ByComponentInterface = ByComponentInterface(by_comp)
 
     # Create new inherited and satisfied statements and update the description
     new_inherited = gens.generate_sample_model(ossp.Inherited)
@@ -51,7 +98,7 @@ def test_reconcile_inheritance_by_component() -> None:
     new_satisfied.responsibility_uuid = test_responsibility_uuid
     new_satisfied.description = 'new satisfied description'
 
-    result_by_comp = inheritance_interface.reconcile_inheritance_by_component([new_inherited], [new_satisfied])
+    result_by_comp = bycomp_interface.reconcile_inheritance_by_component([new_inherited], [new_satisfied])
 
     # Ensure that the resulting by_component has one of each statement and the uuids match the originals
     assert len(result_by_comp.inherited) == 1

@@ -21,7 +21,7 @@ from typing import Dict, List, Tuple
 import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
 from trestle.common.list_utils import as_list, none_if_empty
-from trestle.core.crm.inheritance_interface import InheritanceInterface
+from trestle.core.crm.bycomp_interface import ByComponentInterface
 from trestle.core.crm.leveraged_statements import InheritanceMarkdownReader
 
 logger = logging.getLogger(__name__)
@@ -72,8 +72,8 @@ class ExportReader:
                     if by_comp.component_uuid in by_comp_dict:
                         comp_inheritance_info = by_comp_dict[by_comp.component_uuid]
 
-                        inheritance_interface = InheritanceInterface(by_comp)
-                        by_comp = inheritance_interface.reconcile_inheritance_by_component(
+                        bycomp_interface = ByComponentInterface(by_comp)
+                        by_comp = bycomp_interface.reconcile_inheritance_by_component(
                             comp_inheritance_info[0], comp_inheritance_info[1]
                         )
 
@@ -104,8 +104,8 @@ class ExportReader:
                         if by_comp.component_uuid in by_comp_dict:
                             comp_inheritance_info = by_comp_dict[by_comp.component_uuid]
 
-                            inheritance_interface = InheritanceInterface(by_comp)
-                            by_comp = inheritance_interface.reconcile_inheritance_by_component(
+                            bycomp_interface = ByComponentInterface(by_comp)
+                            by_comp = bycomp_interface.reconcile_inheritance_by_component(
                                 comp_inheritance_info[0], comp_inheritance_info[1]
                             )
 
