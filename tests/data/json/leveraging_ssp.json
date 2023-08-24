@@ -124,7 +124,7 @@
           {
             "uuid": "22222222-0000-4000-9001-000000000001",
             "type": "this-system",
-            "title": " **THIS SYSTEM (SaaS)** ",
+            "title": "THIS SYSTEM (SaaS)",
             "description": "This Leveraging SaaS.\n\nThe entire system as depicted in the system authorization boundary",
             "props": [
               {

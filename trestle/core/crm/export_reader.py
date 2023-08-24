@@ -18,6 +18,7 @@ import os
 import pathlib
 from typing import Dict, List, Tuple
 
+import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
 from trestle.common.list_utils import as_list, none_if_empty
 from trestle.core.crm.inheritance_interface import InheritanceInterface
@@ -69,12 +70,20 @@ class ExportReader:
                 for by_comp in as_list(implemented_requirement.by_components):
 
                     if by_comp.component_uuid in by_comp_dict:
-                        comp = by_comp_dict[by_comp.component_uuid]
+                        comp_inheritance_info = by_comp_dict[by_comp.component_uuid]
 
                         inheritance_interface = InheritanceInterface(by_comp)
-                        by_comp = inheritance_interface.reconcile_inheritance_by_component(comp[0], comp[1])
+                        by_comp = inheritance_interface.reconcile_inheritance_by_component(
+                            comp_inheritance_info[0], comp_inheritance_info[1]
+                        )
+
+                        # Delete the entry from the by_comp_dict once processed to avoid duplicates
+                        del by_comp_dict[by_comp.component_uuid]
 
                     new_by_comp.append(by_comp)
+
+                # Add any new by_components that were not in the original implemented requirement
+                new_by_comp.extend(ExportReader._add_new_by_comps(by_comp_dict))
 
                 implemented_requirement.by_components = new_by_comp
 
@@ -93,12 +102,20 @@ class ExportReader:
                     for by_comp in as_list(stm.by_components):
 
                         if by_comp.component_uuid in by_comp_dict:
-                            comp = by_comp_dict[by_comp.component_uuid]
+                            comp_inheritance_info = by_comp_dict[by_comp.component_uuid]
 
                             inheritance_interface = InheritanceInterface(by_comp)
-                            by_comp = inheritance_interface.reconcile_inheritance_by_component(comp[0], comp[1])
+                            by_comp = inheritance_interface.reconcile_inheritance_by_component(
+                                comp_inheritance_info[0], comp_inheritance_info[1]
+                            )
+
+                            # Delete the entry from the by_comp_dict once processed to avoid duplicates
+                            del by_comp_dict[by_comp.component_uuid]
 
                         new_by_comp.append(by_comp)
+
+                    # Add any new by_components that were not in the original statement
+                    new_by_comp.extend(ExportReader._add_new_by_comps(by_comp_dict))
 
                     stm.by_components = new_by_comp
 
@@ -155,3 +172,15 @@ class ExportReader:
 
                 markdown_dict[control_dir] = by_comp_dict
         return markdown_dict
+
+    @staticmethod
+    def _add_new_by_comps(by_comp_dict: ByComponentDict) -> List[ossp.ByComponent]:
+        """Add new by_components to the implemented requirement."""
+        new_by_comp: List[ossp.ByComponent] = []
+        for comp_uuid, inheritance_info in by_comp_dict.items():
+            by_comp: ossp.ByComponent = gens.generate_sample_model(ossp.ByComponent)
+            by_comp.component_uuid = comp_uuid
+            by_comp.inherited = none_if_empty(inheritance_info[0])
+            by_comp.satisfied = none_if_empty(inheritance_info[1])
+            new_by_comp.append(by_comp)
+        return new_by_comp
