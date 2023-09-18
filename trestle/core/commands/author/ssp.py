@@ -622,39 +622,28 @@ class SSPAssemble(AuthorCommonCommand):
 
             # If this is a leveraging SSP, update it with the retrieved the exports from the leveraged SSP
             ipath = pathlib.Path(md_path, const.INHERITANCE_VIEW_DIR)
+            reader: ExportReader
             if os.path.exists(ipath):
                 reader = ExportReader(ipath, ssp)
                 ssp = reader.read_exports_from_markdown()
 
             if args.leveraged_ssp:
+                local_path = f'{const.MODEL_DIR_SSP}/{args.leveraged_ssp}/system-security-plan.json'
+                ssp_path = trestle_root / local_path
+                leveraged_ssp_object: ossp.SystemSecurityPlan
+                _, _, leveraged_ssp_object = ModelUtils.load_distributed(ssp_path, trestle_root)
 
-                leveraged_comps = {}
+                # The reader is set, filter the components to only those that are leveraged
+                components: List[ossp.SystemComponent] = []
+                if reader:
+                    leveraged_components = reader.get_leveraged_components()
+                    for component in as_list(leveraged_ssp_object.system_implementation.components):
+                        if component.title in leveraged_components:
+                            components.append(component)
 
-                try:
-                    leveraged_comps, _ = ModelUtils.load_model_for_class(
-                        trestle_root,
-                        args.leveraged_ssp,
-                        ossp.SystemSecurityPlan
-                    )  # type: ignore
-                except Exception as e:
-                    logger.error(f'Failed to load model: {e}')
-                    return {}  # type: ignore
-
-                if leveraged_comps.system_implementation.components[0].type != const.THIS_SYSTEM_AS_KEY:
-                    logger.error(
-                        f'Expected {const.THIS_SYSTEM_AS_KEY} as the first component in the leveraged SSP. \
-                            No leveraged information found'
-                    )
-                    return {}  # type: ignore
-                else:
-                    logger.debug('Successfully fetched system component.')
-                href: pathlib.Path = ModelUtils.get_model_path_for_name_and_class(
-                    trestle_root, args.leveraged_ssp, ossp.SystemSecurityPlan
-                )  # type: ignore
-                leveraged: List[ossp.SystemComponent] = []
-                leveraged.append(leveraged_comps.system_implementation.components[0])
-                leverager = Leverager(ssp, leveraged, args.leveraged_ssp, trestle_root, href)
-                leverager.add_leveraged_info()
+                # Update the ssp with the leveraged components
+                leverager = Leverager(components, local_path)
+                leverager.add_leveraged_info(ssp)
 
             ssp.import_profile.href = profile_href
 

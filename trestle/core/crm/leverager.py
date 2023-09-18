@@ -15,12 +15,14 @@
 """Reference authorizations and components from a leveraged SSP in a leveraging SSP."""
 
 import logging
+import os
 import pathlib
 from typing import List
 
 import trestle.core.generators as gens
 import trestle.oscal.common as common
 import trestle.oscal.ssp as ossp
+from trestle.common.list_utils import as_list
 
 logger = logging.getLogger(__name__)
 
@@ -28,33 +30,26 @@ logger = logging.getLogger(__name__)
 class Leverager():
     """Reference authorizations and components from a leveraged SSP in a leveraging SSP."""
 
-    def __init__(
-        self,
-        leveraging_ssp: ossp.SystemSecurityPlan,
-        leveraged_components: List[ossp.SystemComponent],
-        leveraged_ssp: str,
-        trestle_root: pathlib.Path,
-        href: pathlib.Path
-    ) -> None:
+    def __init__(self, leveraged_components: List[ossp.SystemComponent], ssp_path: pathlib.Path) -> None:
         """Initialize the Leverager class."""
         logger.debug('Initializing Leverager.')
-        self._leveraging_ssp: ossp.SystemSecurityPlan = leveraging_ssp
         self._leveraged_components: List[ossp.SystemComponent] = leveraged_components
-        self._leveraged_authz: ossp.LeveragedAuthorization = self._create_leveraged_authz(
-            leveraged_ssp, trestle_root, href
-        )
+        self._leveraged_authz: ossp.LeveragedAuthorization = self._create_leveraged_authz(ssp_path)
         self._leveraging_components: List[ossp.SystemComponent] = self._create_leveraging_components()
 
-    def _create_leveraged_authz(
-        self, leveraged_ssp: str, trestle_root: pathlib.Path, href: pathlib.Path
-    ) -> ossp.LeveragedAuthorization:
+    def _create_leveraged_authz(self, ssp_path: pathlib.Path) -> ossp.LeveragedAuthorization:
         """Create leveraged authorizations."""
         logger.debug('Creating leveraged authorizations.')
         leveraged_authz = gens.generate_sample_model(ossp.LeveragedAuthorization)
         # Insert the relative leveraged ssp path as a link
         leveraged_authz.links = []
-        link: common.Link = common.Link(href=href)  # type: ignore
-        leveraged_authz.links.append(link)  # type: ignore
+        link: common.Link = common.Link(href=ssp_path)
+        leveraged_authz.links.append(link)
+
+        # Set the title of the leveraged authorization
+        directory = os.path.dirname(ssp_path)
+        leveraged_ssp = os.path.basename(directory)
+
         leveraged_authz.title = f'Leveraged Authorization for {leveraged_ssp}'
         return leveraged_authz
 
@@ -71,24 +66,23 @@ class Leverager():
             leveraging_comp.status = comp.status
 
             leveraging_comp.props = []
-            leveraging_comp.props.append(common.Property(name='implementation-point', value='external'))  # type: ignore
+            leveraging_comp.props.append(common.Property(name='implementation-point', value='external'))
             leveraging_comp.props.append(
-                common.Property(name='leveraged-authorization-uuid', value=self._leveraged_authz.uuid)  # type: ignore
+                common.Property(name='leveraged-authorization-uuid', value=self._leveraged_authz.uuid)
             )
-            leveraging_comp.props.append(common.Property(name='inherited-uuid', value=comp.uuid))  # type: ignore
+            leveraging_comp.props.append(common.Property(name='inherited-uuid', value=comp.uuid))
             # Add the leveraging component to the leveraging components list
             leveraging_components.append(leveraging_comp)
 
         return leveraging_components
 
-    def add_leveraged_info(self) -> ossp.SystemSecurityPlan:
+    def add_leveraged_info(self, leveraging_ssp: ossp.SystemSecurityPlan) -> None:
         """Add leveraged information to the SSP."""
         logger.debug('Adding leveraged information.')
+        leveraged_auths = as_list(leveraging_ssp.system_implementation.leveraged_authorizations)
         # Add the leveraged authorization to the leveraging SSP
-        self._leveraging_ssp.system_implementation.leveraged_authorizations = []
-        self._leveraging_ssp.system_implementation.leveraged_authorizations.append(self._leveraged_authz)
+        leveraging_ssp.system_implementation.leveraged_authorizations = leveraged_auths
+        leveraging_ssp.system_implementation.leveraged_authorizations.append(self._leveraged_authz)
         # Add the leveraging components to the leveraging SSP
-        self._leveraging_ssp.system_implementation.components = []
-        self._leveraging_ssp.system_implementation.components = self._leveraging_components
-
-        return self._leveraging_ssp
+        leveraging_ssp.system_implementation.components = as_list(leveraging_ssp.system_implementation.components)
+        leveraging_ssp.system_implementation.components = self._leveraging_components

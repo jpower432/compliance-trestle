@@ -405,7 +405,8 @@ def test_ssp_assemble(tmp_trestle_dir: pathlib.Path) -> None:
         regenerate=False,
         version=new_version,
         name=None,
-        compdefs=args_compdefs
+        compdefs=args_compdefs,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
 
@@ -441,7 +442,8 @@ def test_ssp_assemble(tmp_trestle_dir: pathlib.Path) -> None:
         regenerate=False,
         name=None,
         version=None,
-        compdefs=args_compdefs
+        compdefs=args_compdefs,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
 
@@ -462,7 +464,8 @@ def test_ssp_assemble(tmp_trestle_dir: pathlib.Path) -> None:
         regenerate=True,
         name=None,
         version=None,
-        compdefs=args_compdefs
+        compdefs=args_compdefs,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
     assert orig_uuid == test_utils.get_model_uuid(tmp_trestle_dir, ssp_name, ossp.SystemSecurityPlan)
@@ -477,7 +480,8 @@ def test_ssp_assemble(tmp_trestle_dir: pathlib.Path) -> None:
         regenerate=True,
         name=None,
         version='new version to force write',
-        compdefs=args_compdefs
+        compdefs=args_compdefs,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
     assert orig_uuid != test_utils.get_model_uuid(tmp_trestle_dir, ssp_name, ossp.SystemSecurityPlan)
@@ -574,6 +578,7 @@ def test_ssp_assemble_with_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
         regenerate=False,
         name=None,
         compdefs=args_compdefs,
+        leveraged_ssp='leveraged_ssp',
         version=None
     )
     assert ssp_assemble._run(args) == 0
@@ -608,7 +613,8 @@ def test_ssp_filter(tmp_trestle_dir: pathlib.Path) -> None:
         name=None,
         version=None,
         regenerate=False,
-        compdefs=gen_args.compdefs
+        compdefs=gen_args.compdefs,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
 
@@ -810,7 +816,8 @@ def test_ssp_filter_control_origination(tmp_trestle_dir: pathlib.Path) -> None:
         name=None,
         version=None,
         regenerate=False,
-        compdefs=gen_args.compdefs
+        compdefs=gen_args.compdefs,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
 
@@ -1023,7 +1030,8 @@ def test_ssp_assemble_no_comps(tmp_trestle_dir: pathlib.Path, capsys) -> None:
         regenerate=False,
         version=None,
         name=None,
-        compdefs=None
+        compdefs=None,
+        leveraged_ssp=None
     )
     assert ssp_assemble._run(args) == 0
 

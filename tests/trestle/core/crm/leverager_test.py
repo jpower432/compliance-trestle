@@ -15,7 +15,7 @@
 """Tests for Leverager."""
 
 import logging
-import pathlib
+from typing import List
 
 import pytest
 
@@ -27,70 +27,49 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def sample_leveraging_ssp():
+def sample_leveraging_ssp() -> ossp.SystemSecurityPlan:
     """Return a generated leveraging SSP."""
     return gens.generate_sample_model(ossp.SystemSecurityPlan)
 
 
 @pytest.fixture
-def sample_leveraged_components():
+def sample_leveraged_components() -> List[ossp.SystemComponent]:
     """Return a list of generated leveraged components."""
     return [gens.generate_sample_model(ossp.SystemComponent) for _ in range(3)]
 
 
 @pytest.fixture
-def sample_trestle_root():
-    """Return a sample trestle root path."""
-    return pathlib.Path('/sample/trestle/root')
-
-
-@pytest.fixture
-def sample_ssp_path():
+def sample_ssp_path() -> str:
     """Return a sample ssp path."""
     return str('path/to/leveraged/ssp')
 
 
-def test_create_leveraged_authz(
-    sample_leveraging_ssp, sample_leveraged_components, sample_trestle_root, sample_ssp_path
-):
+def test_create_leveraged_authz(sample_leveraged_components: List[ossp.SystemComponent], sample_ssp_path: str) -> None:
     """Test that a leveraged authorization is created."""
-    leverager = Leverager(
-        sample_leveraging_ssp,
-        sample_leveraged_components,
-        'sample_leveraged_ssp',
-        sample_trestle_root,
-        sample_ssp_path
-    )
-    result = leverager._create_leveraged_authz('sample_leveraged_ssp', sample_trestle_root, sample_ssp_path)
+    leverager = Leverager(sample_leveraged_components, sample_ssp_path)
+    result = leverager._create_leveraged_authz(sample_ssp_path)
     assert isinstance(result, ossp.LeveragedAuthorization)
     assert result.links[0].href == sample_ssp_path  # type: ignore
     assert result.title
 
 
 def test_create_leveraging_components(
-    sample_leveraging_ssp, sample_leveraged_components, sample_trestle_root, sample_ssp_path
-):
+    sample_leveraged_components: List[ossp.SystemComponent], sample_ssp_path: str
+) -> None:
     """Test that leveraging components are created."""
-    leverager = Leverager(
-        sample_leveraging_ssp,
-        sample_leveraged_components,
-        'sample_leveraged_ssp',
-        sample_trestle_root,
-        sample_ssp_path
-    )
+    leverager = Leverager(sample_leveraged_components, sample_ssp_path)
     result = leverager._create_leveraging_components()
     assert isinstance(result, list)
     assert all(isinstance(comp, ossp.SystemComponent) for comp in result)
 
 
-def test_add_leveraged_info(sample_leveraging_ssp, sample_leveraged_components, sample_trestle_root, sample_ssp_path):
+def test_add_leveraged_info(
+    sample_leveraging_ssp: ossp.SystemSecurityPlan,
+    sample_leveraged_components: List[ossp.SystemComponent],
+    sample_ssp_path: str
+) -> None:
     """Test that leveraged information is added to the SSP."""
-    leverager = Leverager(
-        sample_leveraging_ssp,
-        sample_leveraged_components,
-        'sample_leveraged_ssp',
-        sample_trestle_root,
-        sample_ssp_path
-    )
-    result = leverager.add_leveraged_info()
-    assert isinstance(result, ossp.SystemSecurityPlan)
+    leverager = Leverager(sample_leveraged_components, sample_ssp_path)
+    leverager.add_leveraged_info(sample_leveraging_ssp)
+    assert sample_leveraging_ssp.system_implementation.components is not None
+    assert len(sample_leveraging_ssp.system_implementation.components) == 3
