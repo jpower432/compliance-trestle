@@ -45,6 +45,7 @@ from trestle.core.control_interface import ControlInterface, ParameterRep
 from trestle.core.control_reader import ControlReader
 from trestle.core.crm.export_reader import ExportReader
 from trestle.core.crm.export_writer import ExportWriter
+from trestle.core.crm.leverager import Leverager
 from trestle.core.models.file_content_type import FileContentType
 from trestle.core.profile_resolver import ProfileResolver
 from trestle.core.remote.cache import FetcherFactory
@@ -268,6 +269,7 @@ class SSPAssemble(AuthorCommonCommand):
         self.add_argument('-o', '--output', help=output_help_str, required=True, type=str)
         self.add_argument('-r', '--regenerate', action='store_true', help=const.HELP_REGENERATE)
         self.add_argument('-vn', '--version', help=const.HELP_VERSION, required=False, type=str)
+        self.add_argument('-ls', '--leveraged-ssp', help=const.HELP_LEVERAGED, required=False, type=str)
 
     @staticmethod
     def _get_ssp_component(ssp: ossp.SystemSecurityPlan, gen_comp: generic.GenericComponent) -> ossp.SystemComponent:
@@ -623,6 +625,36 @@ class SSPAssemble(AuthorCommonCommand):
             if os.path.exists(ipath):
                 reader = ExportReader(ipath, ssp)
                 ssp = reader.read_exports_from_markdown()
+
+            if args.leveraged_ssp:
+
+                leveraged_comps = {}
+
+                try:
+                    leveraged_comps, _ = ModelUtils.load_model_for_class(
+                        trestle_root,
+                        args.leveraged_ssp,
+                        ossp.SystemSecurityPlan
+                    )  # type: ignore
+                except Exception as e:
+                    logger.error(f'Failed to load model: {e}')
+                    return {}  # type: ignore
+
+                if leveraged_comps.system_implementation.components[0].type != const.THIS_SYSTEM_AS_KEY:
+                    logger.error(
+                        f'Expected {const.THIS_SYSTEM_AS_KEY} as the first component in the leveraged SSP. \
+                            No leveraged information found'
+                    )
+                    return {}  # type: ignore
+                else:
+                    logger.debug('Successfully fetched system component.')
+                href: pathlib.Path = ModelUtils.get_model_path_for_name_and_class(
+                    trestle_root, args.leveraged_ssp, ossp.SystemSecurityPlan
+                )  # type: ignore
+                leveraged: List[ossp.SystemComponent] = []
+                leveraged.append(leveraged_comps.system_implementation.components[0])
+                leverager = Leverager(ssp, leveraged, args.leveraged_ssp, trestle_root, href)
+                leverager.add_leveraged_info()
 
             ssp.import_profile.href = profile_href
 
