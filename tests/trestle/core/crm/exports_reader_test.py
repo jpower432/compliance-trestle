@@ -80,6 +80,30 @@ resp statement description
 My Satisfied Description
 """
 
+unmapped_inheritance = """---
+x-trestle-statement:
+  # Add or modify leveraged SSP Statements here.
+  provided-uuid: 18ac4e2a-b5f2-46e4-94fa-cc84ab6fe115
+  responsibility-uuid: 4b34c68f-75fa-4b38-baf0-e50158c13ac3
+x-trestle-leveraging-comp:
+  # Leveraged statements can be optionally associated with components in this system.
+  # Associate leveraged statements to Components of this system here:
+  - name: REPLACE_ME
+---
+
+# Provided Statement Description
+
+provided statement description
+
+# Responsibility Statement Description
+
+resp statement description
+
+# Satisfied Statement Description
+
+<!-- Use this section to explain how the inherited responsibility is being satisfied. -->
+"""
+
 
 def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
     """Test exports reader with inheritance view."""
@@ -90,6 +114,14 @@ def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
     ac_2.mkdir(parents=True)
 
     file = ac_2 / f'{expected_appliance_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(inheritance_text)
+
+    # test with a statement
+    ac_2a = ac_appliance_dir.joinpath('ac-2_smt.a')
+    ac_2a.mkdir(parents=True)
+
+    file = ac_2a / f'{expected_appliance_uuid}.md'
     with open(file, 'w') as f:
         f.write(inheritance_text)
 
@@ -122,17 +154,29 @@ def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
     assert by_comp.satisfied[0].responsibility_uuid == '4b34c68f-75fa-4b38-baf0-e50158c13ac2'  # type: ignore
     assert by_comp.satisfied[0].description == 'My Satisfied Description'  # type: ignore
 
+    # Ensure that the statement is also added to the SSP
+    assert implemented_requirements[0].statements is not None
+    assert implemented_requirements[0].statements[0].statement_id == 'ac-2_smt.a'
+
 
 def test_read_inheritance_markdown_dir(tmp_trestle_dir: pathlib.Path) -> None:
     """Test reading inheritance view directory."""
     ipath = tmp_trestle_dir.joinpath(leveraging_ssp, const.INHERITANCE_VIEW_DIR)
     ac_appliance_dir = ipath.joinpath('Access Control Appliance')
+
     ac_2 = ac_appliance_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
     file = ac_2 / f'{expected_appliance_uuid}.md'
     with open(file, 'w') as f:
         f.write(inheritance_text)
+
+    ac_21 = ac_appliance_dir.joinpath('ac-2.1')
+    ac_21.mkdir(parents=True)
+    # Ensure this file does not get added to the dictionary
+    file = ac_21 / f'{expected_appliance_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(unmapped_inheritance)
 
     test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
 
@@ -197,3 +241,41 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
 
     assert len(inheritance_info[0]) == 2
     assert len(inheritance_info[1]) == 2
+
+
+def test_get_leveraged_components(tmp_trestle_dir: pathlib.Path) -> None:
+    """Test leveraged mapped components from Markdown."""
+    ipath = tmp_trestle_dir.joinpath(leveraging_ssp, const.INHERITANCE_VIEW_DIR)
+
+    ac_appliance_dir = ipath.joinpath('Access Control Appliance')
+    ac_2 = ac_appliance_dir.joinpath('ac-2')
+    ac_2.mkdir(parents=True)
+
+    file = ac_2 / f'{expected_appliance_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(inheritance_text)
+
+    this_system_dir = ipath.joinpath('This System')
+    ac_2 = this_system_dir.joinpath('ac-2')
+    ac_2.mkdir(parents=True)
+
+    file = ac_2 / f'{expected_appliance_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(inheritance_text_2)
+
+    test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
+
+    orig_ssp, _ = ModelUtils.load_model_for_class(
+        tmp_trestle_dir,
+        leveraging_ssp,
+        ossp.SystemSecurityPlan,
+        FileContentType.JSON)
+
+    reader = exportreader.ExportReader(ipath, orig_ssp)  # type: ignore
+    _ = reader.read_exports_from_markdown()
+
+    leveraged_components = reader.get_leveraged_components()
+
+    assert len(leveraged_components) == 2
+    assert 'Access Control Appliance' in leveraged_components
+    assert 'This System' in leveraged_components

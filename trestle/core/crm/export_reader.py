@@ -51,16 +51,52 @@ class ExportReader:
         Arguments:
             root_path: A root path object where an SSP's inheritance markdown is located.
             ssp: A system security plan object that will be updated with the inheritance information.
+
+        Notes:
+            The mapped components list is used to track which components have been mapped to controls in the markdown.
+            It can be retrieved with the get_leveraged_components method. This will be empty until the
+            read_exports_from_markdown method is called.
         """
         self._ssp: ossp.SystemSecurityPlan = ssp
+
+        # Create a dictionary of implemented requirements keyed by control id for merging operations
+        self._implemented_requirements: Dict[str, ossp.ImplementedRequirement] = self._create_impl_req_dict()
+
+        # List of component titles that have been mapped to controls in the Markdown
+        self._mapped_components: List[str] = []
+
         self._root_path: pathlib.Path = root_path
+
+    def _create_impl_req_dict(self) -> Dict[str, ossp.ImplementedRequirement]:
+        """Create a dictionary of implemented requirements keyed by control id."""
+        impl_req_dict: Dict[str, ossp.ImplementedRequirement] = {}
+        for impl_req in as_list(self._ssp.control_implementation.implemented_requirements):
+            impl_req_dict[impl_req.control_id] = impl_req
+        return impl_req_dict
 
     def read_exports_from_markdown(self) -> ossp.SystemSecurityPlan:
         """Read inheritance markdown and update the SSP with the inheritance information."""
-        impl_requirements: List[ossp.ImplementedRequirement] = []
+        # Read the information from the markdown files into a dictionary for quick lookup
         markdown_dict: InheritanceViewDict = self._read_inheritance_markdown_directory()
 
-        for implemented_requirement in as_list(self._ssp.control_implementation.implemented_requirements):
+        # Merge the markdown information into existing the implemented requirements
+        self._merge_exports_implemented_requirements(markdown_dict)
+
+        # Process remaining markdown information that was not in the implemented requirements
+        for control_id, by_comp_dict in markdown_dict.items():
+            logging.debug(f'Adding control mapping {control_id} to implemented requirements')
+            self._add_control_mappings_to_implemented_requirements(control_id, by_comp_dict)
+
+        self._ssp.control_implementation.implemented_requirements = list(self._implemented_requirements.values())
+        return self._ssp
+
+    def get_leveraged_components(self) -> List[str]:
+        """Get a list of component titles that have been mapped to controls in the Markdown."""
+        return self._mapped_components
+
+    def _merge_exports_implemented_requirements(self, markdown_dict: InheritanceViewDict) -> None:
+        """Merge all exported inheritance info from the markdown into the implemented requirement dict."""
+        for implemented_requirement in self._implemented_requirements.values():
 
             # If the control id existing in the markdown, then update the by_components
             if implemented_requirement.control_id in markdown_dict:
@@ -85,8 +121,10 @@ class ExportReader:
 
                 # Add any new by_components that were not in the original implemented requirement
                 new_by_comp.extend(ExportReader._add_new_by_comps(by_comp_dict))
-
                 implemented_requirement.by_components = new_by_comp
+
+                # Delete the entry from the markdown_dict once processed to avoid duplicates
+                del markdown_dict[implemented_requirement.control_id]
 
             # Update any implemented requirements statements assemblies
             new_statements: List[ossp.Statement] = []
@@ -117,16 +155,55 @@ class ExportReader:
 
                     # Add any new by_components that were not in the original statement
                     new_by_comp.extend(ExportReader._add_new_by_comps(by_comp_dict))
-
                     stm.by_components = new_by_comp
+
+                    # Delete the entry from the markdown_dict once processed to avoid duplicates
+                    del markdown_dict[statement_id]
 
                 new_statements.append(stm)
 
             implemented_requirement.statements = none_if_empty(new_statements)
-            impl_requirements.append(implemented_requirement)
 
-        self._ssp.control_implementation.implemented_requirements = impl_requirements
-        return self._ssp
+    def _add_control_mappings_to_implemented_requirements(
+        self, control_mapping: str, by_comps: ByComponentDict
+    ) -> None:
+        """Add control mappings to implemented requirements."""
+        # Determine if the control id is actually a statement id
+        if '_smt.' in control_mapping:
+            control_id = control_mapping.split('_smt')[0]
+            implemented_req = self._add_or_get_implemented_requirement(control_id)
+            statement = gens.generate_sample_model(ossp.Statement)
+            statement.statement_id = control_mapping
+            statement.by_components = ExportReader._add_new_by_comps(by_comps)
+            implemented_req.statements = as_list(implemented_req.statements)
+            implemented_req.statements.append(statement)
+            implemented_req.statements = sorted(implemented_req.statements, key=lambda x: x.statement_id)
+        else:
+            implemented_req = self._add_or_get_implemented_requirement(control_mapping)
+            implemented_req.by_components = as_list(implemented_req.by_components)
+            implemented_req.by_components.extend(ExportReader._add_new_by_comps(by_comps))
+
+    def _add_or_get_implemented_requirement(self, control_id: str) -> ossp.ImplementedRequirement:
+        """Add or get implemented requirement from implemented requirements dictionary."""
+        if control_id in self._implemented_requirements:
+            return self._implemented_requirements[control_id]
+
+        implemented_requirement = gens.generate_sample_model(ossp.ImplementedRequirement)
+        implemented_requirement.control_id = control_id
+        self._implemented_requirements[control_id] = implemented_requirement
+        return implemented_requirement
+
+    @staticmethod
+    def _add_new_by_comps(by_comp_dict: ByComponentDict) -> List[ossp.ByComponent]:
+        """Add new by_components to the implemented requirement."""
+        new_by_comp: List[ossp.ByComponent] = []
+        for comp_uuid, inheritance_info in by_comp_dict.items():
+            by_comp: ossp.ByComponent = gens.generate_sample_model(ossp.ByComponent)
+            by_comp.component_uuid = comp_uuid
+            by_comp.inherited = none_if_empty(inheritance_info[0])
+            by_comp.satisfied = none_if_empty(inheritance_info[1])
+            new_by_comp.append(by_comp)
+        return new_by_comp
 
     def _read_inheritance_markdown_directory(self) -> InheritanceViewDict:
         """Read all inheritance markdown files and return a dictionary of all the information."""
@@ -138,6 +215,7 @@ class ExportReader:
             uuid_by_title[component.title] = component.uuid
 
         for comp_dir in os.listdir(self._root_path):
+            is_comp_leveraged = False
             for control_dir in os.listdir(self._root_path.joinpath(comp_dir)):
 
                 # Initialize the by component dictionary for the control directory
@@ -170,18 +248,12 @@ class ExportReader:
                             satisfied.append(leveraged_info.satisfied)
 
                         by_comp_dict[comp_uuid] = (inherited, satisfied)
+                # If there is information in the by_component dictionary, then update the markdown dictionary
+                if by_comp_dict:
+                    is_comp_leveraged = True
+                    markdown_dict[control_dir] = by_comp_dict
 
-                markdown_dict[control_dir] = by_comp_dict
+            if is_comp_leveraged:
+                self._mapped_components.append(comp_dir)
+
         return markdown_dict
-
-    @staticmethod
-    def _add_new_by_comps(by_comp_dict: ByComponentDict) -> List[ossp.ByComponent]:
-        """Add new by_components to the implemented requirement."""
-        new_by_comp: List[ossp.ByComponent] = []
-        for comp_uuid, inheritance_info in by_comp_dict.items():
-            by_comp: ossp.ByComponent = gens.generate_sample_model(ossp.ByComponent)
-            by_comp.component_uuid = comp_uuid
-            by_comp.inherited = none_if_empty(inheritance_info[0])
-            by_comp.satisfied = none_if_empty(inheritance_info[1])
-            new_by_comp.append(by_comp)
-        return new_by_comp
