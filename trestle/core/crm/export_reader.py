@@ -20,6 +20,7 @@ from typing import Dict, List, Tuple
 
 import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
+from trestle.common.err import TrestleError
 from trestle.common.list_utils import as_list, none_if_empty
 from trestle.core.crm.bycomp_interface import ByComponentInterface
 from trestle.core.crm.leveraged_statements import InheritanceMarkdownReader
@@ -89,6 +90,26 @@ class ExportReader:
 
         self._ssp.control_implementation.implemented_requirements = list(self._implemented_requirements.values())
         return self._ssp
+
+    def get_leveraged_ssp_href(self) -> str:
+        """Get the href of the leveraged SSP from a markdown file."""
+        comp_dirs = os.listdir(self._root_path)
+        if len(comp_dirs) == 0:
+            raise TrestleError('No components were found in the markdown.')
+
+        control_dirs = os.listdir(self._root_path.joinpath(comp_dirs[0]))
+        if len(control_dirs) == 0:
+            raise TrestleError('No controls were found in the markdown for component {comp_dirs[0]}.')
+
+        control_dir = self._root_path.joinpath(comp_dirs[0], control_dirs[0])
+
+        files = [f for f in os.listdir(control_dir) if os.path.isfile(os.path.join(control_dir, f))]
+        if len(files) == 0:
+            raise TrestleError(f'No files were found in the markdown for control {control_dirs[0]}.')
+
+        markdown_file_path = control_dir.joinpath(files[0])
+        reader = InheritanceMarkdownReader(markdown_file_path)
+        return reader.get_leveraged_ssp_reference()
 
     def get_leveraged_components(self) -> List[str]:
         """Get a list of component titles that have been mapped to controls in the Markdown."""

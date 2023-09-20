@@ -39,6 +39,9 @@ x-trestle-leveraging-comp:
   # Associate leveraged statements to Components of this system here:
   - name: Access Control Appliance
   - name: THIS SYSTEM (SaaS)
+x-trestle-global:
+    leveraged-ssp:
+      href: trestle://leveraged_ssp.json
 ---
 
 # Provided Statement Description
@@ -64,6 +67,9 @@ x-trestle-leveraging-comp:
   # Leveraged statements can be optionally associated with components in this system.
   # Associate leveraged statements to Components of this system here:
   - name: Access Control Appliance
+x-trestle-global:
+    leveraged-ssp:
+      href: trestle://leveraged_ssp.json
 ---
 
 # Provided Statement Description
@@ -89,6 +95,9 @@ x-trestle-leveraging-comp:
   # Leveraged statements can be optionally associated with components in this system.
   # Associate leveraged statements to Components of this system here:
   - name: REPLACE_ME
+x-trestle-global:
+    leveraged-ssp:
+      href: trestle://leveraged_ssp.json
 ---
 
 # Provided Statement Description
@@ -105,11 +114,8 @@ resp statement description
 """
 
 
-def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
-    """Test exports reader with inheritance view."""
-    ipath = tmp_trestle_dir.joinpath(leveraging_ssp, const.INHERITANCE_VIEW_DIR)
-
-    ac_appliance_dir = ipath.joinpath('Access Control Appliance')
+def prep_inheritance_dir(ac_appliance_dir: pathlib.Path) -> None:
+    """Prepare inheritance directory with basic information."""
     ac_2 = ac_appliance_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
@@ -125,6 +131,13 @@ def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
     with open(file, 'w') as f:
         f.write(inheritance_text)
 
+
+def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
+    """Test exports reader with inheritance view."""
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
+    ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
+    prep_inheritance_dir(ac_appliance_dir)
+
     test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
 
     orig_ssp, _ = ModelUtils.load_model_for_class(
@@ -133,7 +146,7 @@ def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
         ossp.SystemSecurityPlan,
         FileContentType.JSON)
 
-    reader = exportreader.ExportReader(ipath, orig_ssp)  # type: ignore
+    reader = exportreader.ExportReader(inheritance_path, orig_ssp)
     ssp = reader.read_exports_from_markdown()
 
     implemented_requirements = ssp.control_implementation.implemented_requirements
@@ -161,15 +174,9 @@ def test_read_exports_from_markdown(tmp_trestle_dir: pathlib.Path) -> None:
 
 def test_read_inheritance_markdown_dir(tmp_trestle_dir: pathlib.Path) -> None:
     """Test reading inheritance view directory."""
-    ipath = tmp_trestle_dir.joinpath(leveraging_ssp, const.INHERITANCE_VIEW_DIR)
-    ac_appliance_dir = ipath.joinpath('Access Control Appliance')
-
-    ac_2 = ac_appliance_dir.joinpath('ac-2')
-    ac_2.mkdir(parents=True)
-
-    file = ac_2 / f'{expected_appliance_uuid}.md'
-    with open(file, 'w') as f:
-        f.write(inheritance_text)
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
+    ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
+    prep_inheritance_dir(ac_appliance_dir)
 
     ac_21 = ac_appliance_dir.joinpath('ac-2.1')
     ac_21.mkdir(parents=True)
@@ -186,10 +193,10 @@ def test_read_inheritance_markdown_dir(tmp_trestle_dir: pathlib.Path) -> None:
         ossp.SystemSecurityPlan,
         FileContentType.JSON)
 
-    reader = exportreader.ExportReader(ipath, orig_ssp)  # type: ignore
+    reader = exportreader.ExportReader(inheritance_path, orig_ssp)
     markdown_dict: exportreader.InheritanceViewDict = reader._read_inheritance_markdown_directory()
 
-    assert len(markdown_dict) == 1
+    assert len(markdown_dict) == 2
     assert 'ac-2' in markdown_dict
     assert len(markdown_dict['ac-2']) == 2
     assert expected_appliance_uuid in markdown_dict['ac-2']
@@ -203,17 +210,12 @@ def test_read_inheritance_markdown_dir(tmp_trestle_dir: pathlib.Path) -> None:
 
 def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_trestle_dir: pathlib.Path) -> None:
     """Test reading inheritance view directory with components that span multiple leveraged components."""
-    ipath = tmp_trestle_dir.joinpath(leveraging_ssp, const.INHERITANCE_VIEW_DIR)
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
 
-    ac_appliance_dir = ipath.joinpath('Access Control Appliance')
-    ac_2 = ac_appliance_dir.joinpath('ac-2')
-    ac_2.mkdir(parents=True)
+    ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
+    prep_inheritance_dir(ac_appliance_dir)
 
-    file = ac_2 / f'{expected_appliance_uuid}.md'
-    with open(file, 'w') as f:
-        f.write(inheritance_text)
-
-    this_system_dir = ipath.joinpath('This System')
+    this_system_dir = inheritance_path.joinpath('This System')
     ac_2 = this_system_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
@@ -229,10 +231,10 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
         ossp.SystemSecurityPlan,
         FileContentType.JSON)
 
-    reader = exportreader.ExportReader(ipath, orig_ssp)  # type: ignore
+    reader = exportreader.ExportReader(inheritance_path, orig_ssp)
     markdown_dict: exportreader.InheritanceViewDict = reader._read_inheritance_markdown_directory()
 
-    assert len(markdown_dict) == 1
+    assert len(markdown_dict) == 2
     assert 'ac-2' in markdown_dict
     assert len(markdown_dict['ac-2']) == 2
 
@@ -243,19 +245,33 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
     assert len(inheritance_info[1]) == 2
 
 
+def test_get_leveraged_ssp_reference(tmp_trestle_dir: pathlib.Path) -> None:
+    """Test retrieving leveraged SSP reference from Markdown."""
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
+
+    ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
+    prep_inheritance_dir(ac_appliance_dir)
+
+    test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
+
+    orig_ssp, _ = ModelUtils.load_model_for_class(
+        tmp_trestle_dir,
+        leveraging_ssp,
+        ossp.SystemSecurityPlan,
+        FileContentType.JSON)
+
+    reader = exportreader.ExportReader(inheritance_path, orig_ssp)
+    assert reader.get_leveraged_ssp_href() == 'trestle://leveraged_ssp.json'
+
+
 def test_get_leveraged_components(tmp_trestle_dir: pathlib.Path) -> None:
     """Test leveraged mapped components from Markdown."""
-    ipath = tmp_trestle_dir.joinpath(leveraging_ssp, const.INHERITANCE_VIEW_DIR)
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
 
-    ac_appliance_dir = ipath.joinpath('Access Control Appliance')
-    ac_2 = ac_appliance_dir.joinpath('ac-2')
-    ac_2.mkdir(parents=True)
+    ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
+    prep_inheritance_dir(ac_appliance_dir)
 
-    file = ac_2 / f'{expected_appliance_uuid}.md'
-    with open(file, 'w') as f:
-        f.write(inheritance_text)
-
-    this_system_dir = ipath.joinpath('This System')
+    this_system_dir = inheritance_path.joinpath('This System')
     ac_2 = this_system_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
@@ -271,7 +287,7 @@ def test_get_leveraged_components(tmp_trestle_dir: pathlib.Path) -> None:
         ossp.SystemSecurityPlan,
         FileContentType.JSON)
 
-    reader = exportreader.ExportReader(ipath, orig_ssp)  # type: ignore
+    reader = exportreader.ExportReader(inheritance_path, orig_ssp)
     _ = reader.read_exports_from_markdown()
 
     leveraged_components = reader.get_leveraged_components()

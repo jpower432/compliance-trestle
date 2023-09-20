@@ -288,6 +288,8 @@ PROFILE_ADD_REQUIRED_SECTION_FOR_CONTROL_TEXT = '<!-- Add prose here for require
 
 PROFILE = 'profile'
 
+LEVERAGED_SSP = 'leveraged-ssp'
+
 TITLE = 'title'
 
 NAME = 'name'
