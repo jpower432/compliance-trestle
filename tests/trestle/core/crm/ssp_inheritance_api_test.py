@@ -14,6 +14,7 @@
 # limitations under the License.
 """Tests for SSP Inheritance API."""
 
+import copy
 import logging
 import pathlib
 
@@ -78,11 +79,16 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
     ssp_inheritance_api = SSPInheritanceAPI(inheritance_path, tmp_trestle_dir)
     ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
 
-    assert orig_ssp.system_implementation.leveraged_authorizations is not None
-    # There is two because the original document has an existing leveraged authorization
-    assert len(orig_ssp.system_implementation.leveraged_authorizations) == 2
+    # Run twice and assert with no changes that the ssp is the same
+    copy_ssp = copy.deepcopy(orig_ssp)
+    ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
+    assert ModelUtils.models_are_equivalent(orig_ssp, copy_ssp)  # type: ignore
 
-    auth = orig_ssp.system_implementation.leveraged_authorizations[1]
+    assert orig_ssp.system_implementation.leveraged_authorizations is not None
+
+    assert len(orig_ssp.system_implementation.leveraged_authorizations) == 1
+
+    auth = orig_ssp.system_implementation.leveraged_authorizations[0]
 
     assert auth.links is not None
     assert len(auth.links) == 1

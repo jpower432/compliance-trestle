@@ -112,10 +112,9 @@ class SSPInheritanceAPI():
         # Set the title of the leveraged authorization
         leveraged_authz.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
 
-        leveraged_auths = as_list(ssp.system_implementation.leveraged_authorizations)
-        # Add the leveraged authorization to the leveraging SSP
-        ssp.system_implementation.leveraged_authorizations = leveraged_auths
-        ssp.system_implementation.leveraged_authorizations.append(leveraged_authz)
+        # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
+        # coming from inheritance view
+        ssp.system_implementation.leveraged_authorizations = [leveraged_authz]
 
         leveraging_components: List[ossp.SystemComponent] = []
         for comp in components:
