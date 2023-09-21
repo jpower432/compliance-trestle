@@ -30,52 +30,34 @@ logger = logging.getLogger(__name__)
 leveraging_ssp = 'my_ssp'
 leveraged_ssp = 'leveraged_ssp'
 
-inheritance_text = """---
-x-trestle-statement:
-  # Add or modify leveraged SSP Statements here.
-  provided-uuid: 18ac4e2a-b5f2-46e4-94fa-cc84ab6fe115
-  responsibility-uuid: 4b34c68f-75fa-4b38-baf0-e50158c13ac3
-x-trestle-leveraging-comp:
-  # Leveraged statements can be optionally associated with components in this system.
-  # Associate leveraged statements to Components of this system here:
-  - name: Access Control Appliance
-x-trestle-global:
-    leveraged-ssp:
-      href: trestle://system-security-plans/leveraged_ssp/system-security-plan.json
----
-
-# Provided Statement Description
-
-provided statement description
-
-# Responsibility Statement Description
-
-resp statement description
-
-# Satisfied Statement Description
-
-<!-- Use this section to explain how the inherited responsibility is being satisfied. -->
-"""
-
-expected_appliance_uuid = '22222222-0000-4000-9001-000000000003'
+expected_application_uuid = '11111111-0000-4000-9001-000000000002'
+example_provided_uuid = '18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114'
+example_responsibility_uuid = '4b34c68f-75fa-4b38-baf0-e50158c13ac2'
 
 
 def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
     """Test that a leveraged authorization is created."""
     inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
-    ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
-    ac_2 = ac_appliance_dir.joinpath('ac-2')
+    appliance_dir = inheritance_path.joinpath('Application')
+    ac_2 = appliance_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
-    file = ac_2 / f'{expected_appliance_uuid}.md'
+    inheritance_text = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=['Access Control Appliance', 'THIS SYSTEM (SaaS)'],
+        leveraged_ssp_href='trestle://system-security-plans/leveraged_ssp/system-security-plan.json'
+    )
+
+    file = ac_2 / f'{expected_application_uuid}.md'
     with open(file, 'w') as f:
         f.write(inheritance_text)
 
     # test with a statement
-    ac_2a = ac_appliance_dir.joinpath('ac-2_smt.a')
+    ac_2a = appliance_dir.joinpath('ac-2_smt.a')
     ac_2a.mkdir(parents=True)
 
-    file = ac_2a / f'{expected_appliance_uuid}.md'
+    file = ac_2a / f'{expected_application_uuid}.md'
     with open(file, 'w') as f:
         f.write(inheritance_text)
 
@@ -87,6 +69,11 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
         leveraging_ssp,
         ossp.SystemSecurityPlan,
         FileContentType.JSON)
+
+    components = orig_ssp.system_implementation.components
+
+    assert len(components) == 5
+    assert len(orig_ssp.system_implementation.leveraged_authorizations) == 1
 
     ssp_inheritance_api = SSPInheritanceAPI(inheritance_path, tmp_trestle_dir)
     ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
@@ -100,3 +87,17 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
     assert auth.links is not None
     assert len(auth.links) == 1
     assert auth.links[0].href == 'trestle://system-security-plans/leveraged_ssp/system-security-plan.json'
+
+    components = orig_ssp.system_implementation.components
+
+    assert len(components) == 6
+
+    assert components[5].title == 'Application'
+    assert components[5].props is not None
+    assert len(components[5].props) == 3
+    assert components[5].props[0].name == 'implementation-point'
+    assert components[5].props[0].value == 'external'
+    assert components[5].props[1].name == 'leveraged-authorization-uuid'
+    assert components[5].props[1].value == auth.uuid
+    assert components[5].props[2].name == 'inherited-uuid'
+    assert components[5].props[2].value == expected_application_uuid

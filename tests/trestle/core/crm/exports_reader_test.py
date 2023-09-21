@@ -29,95 +29,21 @@ leveraging_ssp = 'my_ssp'
 expected_appliance_uuid = '22222222-0000-4000-9001-000000000003'
 expected_saas_uuid = '22222222-0000-4000-9001-000000000001'
 
-inheritance_text = """---
-x-trestle-statement:
-  # Add or modify leveraged SSP Statements here.
-  provided-uuid: 18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114
-  responsibility-uuid: 4b34c68f-75fa-4b38-baf0-e50158c13ac2
-x-trestle-leveraging-comp:
-  # Leveraged statements can be optionally associated with components in this system.
-  # Associate leveraged statements to Components of this system here:
-  - name: Access Control Appliance
-  - name: THIS SYSTEM (SaaS)
-x-trestle-global:
-    leveraged-ssp:
-      href: trestle://leveraged_ssp.json
----
-
-# Provided Statement Description
-
-provided statement description
-
-# Responsibility Statement Description
-
-resp statement description
-
-# Satisfied Statement Description
-
-<!-- Use this section to explain how the inherited responsibility is being satisfied. -->
-My Satisfied Description
-"""
-
-inheritance_text_2 = """---
-x-trestle-statement:
-  # Add or modify leveraged SSP Statements here.
-  provided-uuid: 18ac4e2a-b5f2-46e4-94fa-cc84ab6fe115
-  responsibility-uuid: 4b34c68f-75fa-4b38-baf0-e50158c13ac3
-x-trestle-leveraging-comp:
-  # Leveraged statements can be optionally associated with components in this system.
-  # Associate leveraged statements to Components of this system here:
-  - name: Access Control Appliance
-x-trestle-global:
-    leveraged-ssp:
-      href: trestle://leveraged_ssp.json
----
-
-# Provided Statement Description
-
-provided statement description
-
-# Responsibility Statement Description
-
-resp statement description
-
-# Satisfied Statement Description
-
-<!-- Use this section to explain how the inherited responsibility is being satisfied. -->
-My Satisfied Description
-"""
-
-unmapped_inheritance = """---
-x-trestle-statement:
-  # Add or modify leveraged SSP Statements here.
-  provided-uuid: 18ac4e2a-b5f2-46e4-94fa-cc84ab6fe115
-  responsibility-uuid: 4b34c68f-75fa-4b38-baf0-e50158c13ac3
-x-trestle-leveraging-comp:
-  # Leveraged statements can be optionally associated with components in this system.
-  # Associate leveraged statements to Components of this system here:
-  - name: REPLACE_ME
-x-trestle-global:
-    leveraged-ssp:
-      href: trestle://leveraged_ssp.json
----
-
-# Provided Statement Description
-
-provided statement description
-
-# Responsibility Statement Description
-
-resp statement description
-
-# Satisfied Statement Description
-
-<!-- Use this section to explain how the inherited responsibility is being satisfied. -->
-"""
+example_provided_uuid = '18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114'
+example_responsibility_uuid = '4b34c68f-75fa-4b38-baf0-e50158c13ac2'
 
 
 def prep_inheritance_dir(ac_appliance_dir: pathlib.Path) -> None:
     """Prepare inheritance directory with basic information."""
     ac_2 = ac_appliance_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
+
+    inheritance_text = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=['Access Control Appliance', 'THIS SYSTEM (SaaS)'],
+        leveraged_ssp_href='trestle://leveraged_ssp.json'
+    )
 
     file = ac_2 / f'{expected_appliance_uuid}.md'
     with open(file, 'w') as f:
@@ -178,12 +104,19 @@ def test_read_inheritance_markdown_dir(tmp_trestle_dir: pathlib.Path) -> None:
     ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
     prep_inheritance_dir(ac_appliance_dir)
 
+    unmapped_text = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=[const.REPLACE_ME],
+        leveraged_ssp_href='trestle://leveraged_ssp.json'
+    )
+
     ac_21 = ac_appliance_dir.joinpath('ac-2.1')
     ac_21.mkdir(parents=True)
     # Ensure this file does not get added to the dictionary
     file = ac_21 / f'{expected_appliance_uuid}.md'
     with open(file, 'w') as f:
-        f.write(unmapped_inheritance)
+        f.write(unmapped_text)
 
     test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
 
@@ -214,6 +147,13 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
 
     ac_appliance_dir = inheritance_path.joinpath('Access Control Appliance')
     prep_inheritance_dir(ac_appliance_dir)
+
+    inheritance_text_2 = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=['Access Control Appliance'],
+        leveraged_ssp_href='trestle://leveraged_ssp.json'
+    )
 
     this_system_dir = inheritance_path.joinpath('This System')
     ac_2 = this_system_dir.joinpath('ac-2')
@@ -274,6 +214,13 @@ def test_get_leveraged_components(tmp_trestle_dir: pathlib.Path) -> None:
     this_system_dir = inheritance_path.joinpath('This System')
     ac_2 = this_system_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
+
+    inheritance_text_2 = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=['Access Control Appliance'],
+        leveraged_ssp_href='trestle://leveraged_ssp.json'
+    )
 
     file = ac_2 / f'{expected_appliance_uuid}.md'
     with open(file, 'w') as f:
