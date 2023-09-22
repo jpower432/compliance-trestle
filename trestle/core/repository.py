@@ -491,7 +491,6 @@ class AgileAuthoring(Repository):
         output: str,
         markdown_dir: str,
         compdefs: str,
-        leveraged_ssp: str = '',
         regenerate: bool = False,
         version: str = ''
     ) -> bool:
@@ -505,7 +504,6 @@ class AgileAuthoring(Repository):
             output=output,
             markdown=markdown_dir,
             compdefs=compdefs,
-            leveraged_ssp=leveraged_ssp,
             trestle_root=self.root_dir,
             regenerate=regenerate,
             version=version,

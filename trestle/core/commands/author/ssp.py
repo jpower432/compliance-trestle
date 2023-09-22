@@ -43,9 +43,7 @@ from trestle.core.commands.common.return_codes import CmdReturnCodes
 from trestle.core.control_context import ContextPurpose, ControlContext
 from trestle.core.control_interface import ControlInterface, ParameterRep
 from trestle.core.control_reader import ControlReader
-from trestle.core.crm.export_reader import ExportReader
-from trestle.core.crm.export_writer import ExportWriter
-from trestle.core.crm.leverager import Leverager
+from trestle.core.crm.ssp_inheritance_api import SSPInheritanceAPI
 from trestle.core.models.file_content_type import FileContentType
 from trestle.core.profile_resolver import ProfileResolver
 from trestle.core.remote.cache import FetcherFactory
@@ -215,40 +213,21 @@ class SSPGenerate(AuthorCommonCommand):
             control are present for mapping.
         """
         # if file not recognized as URI form, assume it represents name of file in trestle directory
-        ssp: ossp.SystemSecurityPlan
         ssp_in_trestle_dir = '://' not in leveraged_ssp_name_or_href
         ssp_href = leveraged_ssp_name_or_href
         if ssp_in_trestle_dir:
             local_path = f'{const.MODEL_DIR_SSP}/{leveraged_ssp_name_or_href}/system-security-plan.json'
-            ssp_path = trestle_root / local_path
-            _, _, ssp = ModelUtils.load_distributed(ssp_path, trestle_root)
-        else:
-            fetcher = FetcherFactory.get_fetcher(trestle_root, ssp_href)
-            try:
-                ssp, _ = fetcher.get_oscal()
-            except TrestleError as e:
-                raise TrestleError(f'Unable to fetch ssp from {ssp_href}: {e}')
+            ssp_href = const.TRESTLE_HREF_HEADING + local_path
 
         inheritance_view_path: pathlib.Path = md_path.joinpath(const.INHERITANCE_VIEW_DIR)
         inheritance_view_path.mkdir(exist_ok=True)
         logger.debug(f'Creating content for inheritance view in {inheritance_view_path}')
 
-        # Filter the ssp implemented requirement by the catalog specified
+        ssp_inheritance_api = SSPInheritanceAPI(inheritance_view_path, trestle_root)
+
+        # Filter the ssp implemented requirements by the catalog specified
         catalog_api: CatalogAPI = CatalogAPI(catalog=resolved_catalog)
-        control_imp: ossp.ControlImplementation = ssp.control_implementation
-
-        new_imp_requirements: List[ossp.ImplementedRequirement] = []
-        for imp_requirement in as_list(control_imp.implemented_requirements):
-            control = catalog_api._catalog_interface.get_control(imp_requirement.control_id)
-            if control is not None:
-                new_imp_requirements.append(imp_requirement)
-        control_imp.implemented_requirements = new_imp_requirements
-
-        ssp.control_implementation = control_imp
-
-        export_writer: ExportWriter = ExportWriter(inheritance_view_path, ssp)
-
-        export_writer.write_exports_as_markdown()
+        ssp_inheritance_api.write_inheritance_as_markdown(ssp_href, catalog_api)
 
 
 class SSPAssemble(AuthorCommonCommand):
@@ -269,7 +248,6 @@ class SSPAssemble(AuthorCommonCommand):
         self.add_argument('-o', '--output', help=output_help_str, required=True, type=str)
         self.add_argument('-r', '--regenerate', action='store_true', help=const.HELP_REGENERATE)
         self.add_argument('-vn', '--version', help=const.HELP_VERSION, required=False, type=str)
-        self.add_argument('-ls', '--leveraged-ssp', help=const.HELP_LEVERAGED, required=False, type=str)
 
     @staticmethod
     def _get_ssp_component(ssp: ossp.SystemSecurityPlan, gen_comp: generic.GenericComponent) -> ossp.SystemComponent:
@@ -621,29 +599,9 @@ class SSPAssemble(AuthorCommonCommand):
             self._generate_roles_in_metadata(ssp)
 
             # If this is a leveraging SSP, update it with the retrieved the exports from the leveraged SSP
-            ipath = pathlib.Path(md_path, const.INHERITANCE_VIEW_DIR)
-            reader: ExportReader
-            if os.path.exists(ipath):
-                reader = ExportReader(ipath, ssp)
-                ssp = reader.read_exports_from_markdown()
-
-            if args.leveraged_ssp:
-                local_path = f'{const.MODEL_DIR_SSP}/{args.leveraged_ssp}/system-security-plan.json'
-                ssp_path = trestle_root / local_path
-                leveraged_ssp_object: ossp.SystemSecurityPlan
-                _, _, leveraged_ssp_object = ModelUtils.load_distributed(ssp_path, trestle_root)
-
-                # The reader is set, filter the components to only those that are leveraged
-                components: List[ossp.SystemComponent] = []
-                if reader:
-                    leveraged_components = reader.get_leveraged_components()
-                    for component in as_list(leveraged_ssp_object.system_implementation.components):
-                        if component.title in leveraged_components:
-                            components.append(component)
-
-                # Update the ssp with the leveraged components
-                leverager = Leverager(components, local_path)
-                leverager.add_leveraged_info(ssp)
+            inheritance_markdown_path = md_path.joinpath(const.INHERITANCE_VIEW_DIR)
+            if os.path.exists(inheritance_markdown_path):
+                SSPInheritanceAPI(inheritance_markdown_path, trestle_root).update_ssp_inheritance(ssp)
 
             ssp.import_profile.href = profile_href
 
