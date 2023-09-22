@@ -36,11 +36,9 @@ example_provided_uuid = '18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114'
 example_responsibility_uuid = '4b34c68f-75fa-4b38-baf0-e50158c13ac2'
 
 
-def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
-    """Test that a leveraged authorization is created."""
-    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
-    appliance_dir = inheritance_path.joinpath('Application')
-    ac_2 = appliance_dir.joinpath('ac-2')
+def prep_dir(component_dir: pathlib.Path) -> None:
+    """Prep dir."""
+    ac_2 = component_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
     inheritance_text = test_utils.generate_test_inheritance_md(
@@ -55,12 +53,19 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
         f.write(inheritance_text)
 
     # test with a statement
-    ac_2a = appliance_dir.joinpath('ac-2_smt.a')
+    ac_2a = component_dir.joinpath('ac-2_smt.a')
     ac_2a.mkdir(parents=True)
 
     file = ac_2a / f'{expected_application_uuid}.md'
     with open(file, 'w') as f:
         f.write(inheritance_text)
+
+
+def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
+    """Test that a leveraged authorization is created."""
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
+    application_dir = inheritance_path.joinpath('Application')
+    prep_dir(application_dir)
 
     test_utils.load_from_json(tmp_trestle_dir, 'leveraged_ssp', leveraged_ssp, ossp.SystemSecurityPlan)
     test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
@@ -79,11 +84,6 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
     ssp_inheritance_api = SSPInheritanceAPI(inheritance_path, tmp_trestle_dir)
     ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
 
-    # Run twice and assert with no changes that the ssp is the same
-    copy_ssp = copy.deepcopy(orig_ssp)
-    ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
-    assert ModelUtils.models_are_equivalent(orig_ssp, copy_ssp)  # type: ignore
-
     assert orig_ssp.system_implementation.leveraged_authorizations is not None
 
     assert len(orig_ssp.system_implementation.leveraged_authorizations) == 1
@@ -96,14 +96,28 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
 
     components = orig_ssp.system_implementation.components
 
-    assert len(components) == 6
+    # This reduce to 4 by removing old leveraged components and adding application
+    assert len(components) == 4
 
-    assert components[5].title == 'Application'
-    assert components[5].props is not None
-    assert len(components[5].props) == 3
-    assert components[5].props[0].name == 'implementation-point'
-    assert components[5].props[0].value == 'external'
-    assert components[5].props[1].name == 'leveraged-authorization-uuid'
-    assert components[5].props[1].value == auth.uuid
-    assert components[5].props[2].name == 'inherited-uuid'
-    assert components[5].props[2].value == expected_application_uuid
+    # Verify that all expected components are present
+    component_titles = [obj.title for obj in components]
+
+    assert 'Access Control Appliance' in component_titles
+    assert 'THIS SYSTEM (SaaS)' in component_titles
+    assert 'Application' in component_titles
+    assert 'This System' in component_titles
+
+    assert components[3].title == 'Application'
+    assert components[3].props is not None
+    assert len(components[3].props) == 3
+    assert components[3].props[0].name == 'implementation-point'
+    assert components[3].props[0].value == 'external'
+    assert components[3].props[1].name == 'leveraged-authorization-uuid'
+    assert components[3].props[1].value == auth.uuid
+    assert components[3].props[2].name == 'inherited-uuid'
+    assert components[3].props[2].value == expected_application_uuid
+
+    # Run twice and assert with no changes that the ssp is the same
+    copy_ssp = copy.deepcopy(orig_ssp)
+    ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
+    assert ModelUtils.models_are_equivalent(orig_ssp, copy_ssp)  # type: ignore
