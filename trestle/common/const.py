@@ -288,6 +288,8 @@ PROFILE_ADD_REQUIRED_SECTION_FOR_CONTROL_TEXT = '<!-- Add prose here for require
 
 PROFILE = 'profile'
 
+LEVERAGED_SSP = 'leveraged-ssp'
+
 TITLE = 'title'
 
 NAME = 'name'
@@ -582,6 +584,10 @@ VALUE_ASSIGNED_PREFIX = 'value-assigned-prefix'
 VALUE_NOT_ASSIGNED_PREFIX = 'value-not-assigned-prefix'
 
 CONTROL_IMPLEMENTATION = 'control-implementation'
+
+AGGREGATES = 'aggregates'
+
+ALT_IDENTIFIER = 'alt-identifier'
 
 IMPLEMENTED_REQUIREMENT = 'implemented-requirement'
 
