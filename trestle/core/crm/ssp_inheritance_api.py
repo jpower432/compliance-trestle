@@ -98,10 +98,16 @@ class SSPInheritanceAPI():
         except TrestleError as e:
             raise TrestleError(f'Unable to fetch ssp from {leveraged_ssp_reference}: {e}')
 
-        leveraged_authz = gens.generate_sample_model(ossp.LeveragedAuthorization)
-        leveraged_authz.links = as_list(leveraged_authz.links)
         link: common.Link = common.Link(href=leveraged_ssp_reference)
-        leveraged_authz.links.append(link)
+        # break this line into two lines to avoid a mypy error
+        if (ssp.system_implementation.leveraged_authorizations is not None
+                and ssp.system_implementation.leveraged_authorizations[0].links is not None
+                and ssp.system_implementation.leveraged_authorizations[0].links[0].href == link.href):
+            leveraged_authz = ssp.system_implementation.leveraged_authorizations[0]
+        else:
+            leveraged_authz = gens.generate_sample_model(ossp.LeveragedAuthorization)
+            leveraged_authz.links = as_list(leveraged_authz.links)
+            leveraged_authz.links.append(link)
 
         # Set the title of the leveraged authorization
         leveraged_authz.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
