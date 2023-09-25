@@ -24,6 +24,7 @@ import trestle.common.const as const
 import trestle.core.crm.export_reader as exportreader
 import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
+from trestle.common.err import TrestleError
 from trestle.common.model_utils import ModelUtils
 from trestle.core.models.file_content_type import FileContentType
 
@@ -223,6 +224,38 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
     # Only leveraging from one component
     assert len(inheritance_info[0]) == 1
     assert len(inheritance_info[1]) == 1
+
+
+def test_read_inheritance_markdown_dir_with_invalid_mapping(tmp_trestle_dir: pathlib.Path) -> None:
+    """Test reading inheritance view directory with a component that does not exist."""
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
+
+    invalid_text = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=['Invalid Component'],
+        leveraged_ssp_href='trestle://leveraged_ssp.json'
+    )
+
+    this_system_dir = inheritance_path.joinpath('This System')
+    ac_2 = this_system_dir.joinpath('ac-2')
+    ac_2.mkdir(parents=True)
+
+    file = ac_2 / f'{expected_appliance_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(invalid_text)
+
+    test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
+
+    orig_ssp, _ = ModelUtils.load_model_for_class(
+        tmp_trestle_dir,
+        leveraging_ssp,
+        ossp.SystemSecurityPlan,
+        FileContentType.JSON)
+
+    with pytest.raises(TrestleError):
+        reader = exportreader.ExportReader(inheritance_path, orig_ssp)
+        _ = reader._read_inheritance_markdown_directory()
 
 
 def test_get_leveraged_ssp_reference(tmp_trestle_dir: pathlib.Path) -> None:

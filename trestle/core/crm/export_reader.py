@@ -246,6 +246,10 @@ class ExportReader:
                         continue
 
                     for comp in leveraged_info.leveraging_comp_titles:
+
+                        if comp not in uuid_by_title:
+                            raise TrestleError(f'Component {comp} does not exist in the target SSP')
+
                         comp_uuid = uuid_by_title[comp]
                         inherited: List[ossp.Inherited] = []
                         satisfied: List[ossp.Satisfied] = []
