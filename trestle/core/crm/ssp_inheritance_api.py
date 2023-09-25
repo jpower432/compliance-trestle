@@ -99,22 +99,24 @@ class SSPInheritanceAPI():
             raise TrestleError(f'Unable to fetch ssp from {leveraged_ssp_reference}: {e}')
 
         link: common.Link = common.Link(href=leveraged_ssp_reference)
-        # break this line into two lines to avoid a mypy error
-        if (ssp.system_implementation.leveraged_authorizations is not None
+        if reader.get_leveraged_components() is None:
+            logger.warn('No leveraged components mapped in inheritance view.')
+        else:
+            if (ssp.system_implementation.leveraged_authorizations is not None
                 and ssp.system_implementation.leveraged_authorizations[0].links is not None
                 and ssp.system_implementation.leveraged_authorizations[0].links[0].href == link.href):
-            leveraged_authz = ssp.system_implementation.leveraged_authorizations[0]
-        else:
-            leveraged_authz = gens.generate_sample_model(ossp.LeveragedAuthorization)
-            leveraged_authz.links = as_list(leveraged_authz.links)
-            leveraged_authz.links.append(link)
+                leveraged_authz = ssp.system_implementation.leveraged_authorizations[0]
+            else:
+                leveraged_authz = gens.generate_sample_model(ossp.LeveragedAuthorization)
+                leveraged_authz.links = as_list(leveraged_authz.links)
+                leveraged_authz.links.append(link)
 
-        # Set the title of the leveraged authorization
-        leveraged_authz.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
+            # Set the title of the leveraged authorization
+            leveraged_authz.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
 
-        # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
-        # coming from inheritance view
-        ssp.system_implementation.leveraged_authorizations = [leveraged_authz]
+            # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
+            # coming from inheritance view
+            ssp.system_implementation.leveraged_authorizations = [leveraged_authz]
 
         # Reconcile the current leveraged components with the leveraged components in the inheritance view
         mapped_components: Dict[str, ossp.SystemComponent] = {}
