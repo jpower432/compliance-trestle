@@ -14,11 +14,15 @@
 """Tests for the ssp_generator module."""
 
 import pathlib
+import uuid
+
+import pytest
 
 from tests import test_utils
 
 import trestle.common.const as const
 import trestle.core.crm.export_reader as exportreader
+import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
 from trestle.common.model_utils import ModelUtils
 from trestle.core.models.file_content_type import FileContentType
@@ -31,6 +35,16 @@ expected_saas_uuid = '22222222-0000-4000-9001-000000000001'
 
 example_provided_uuid = '18ac4e2a-b5f2-46e4-94fa-cc84ab6fe114'
 example_responsibility_uuid = '4b34c68f-75fa-4b38-baf0-e50158c13ac2'
+
+
+@pytest.fixture(scope='function')
+def sample_implemented_requirement() -> ossp.ImplementedRequirement:
+    """Return a valid ComponentDefinition object with some contents."""
+    # one component has no properties - the other has two
+    impl_req: ossp.ImplementedRequirement = gens.generate_sample_model(ossp.ImplementedRequirement)
+    by_comp: ossp.ByComponent = gens.generate_sample_model(ossp.ByComponent)
+    impl_req.by_components = [by_comp]
+    return impl_req
 
 
 def prep_inheritance_dir(ac_appliance_dir: pathlib.Path) -> None:
@@ -129,10 +143,12 @@ def test_read_inheritance_markdown_dir(tmp_trestle_dir: pathlib.Path) -> None:
     reader = exportreader.ExportReader(inheritance_path, orig_ssp)
     markdown_dict: exportreader.InheritanceViewDict = reader._read_inheritance_markdown_directory()
 
-    assert len(markdown_dict) == 2
+    assert len(markdown_dict) == 3
     assert 'ac-2' in markdown_dict
     assert len(markdown_dict['ac-2']) == 2
     assert expected_appliance_uuid in markdown_dict['ac-2']
+
+    assert len(markdown_dict['ac-2.1']) == 0
 
     inheritance_info = markdown_dict['ac-2'][expected_appliance_uuid]
 
@@ -155,6 +171,13 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
         leveraged_ssp_href='trestle://leveraged_ssp.json'
     )
 
+    unmapped_text = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=[const.REPLACE_ME],
+        leveraged_ssp_href='trestle://leveraged_ssp.json'
+    )
+
     this_system_dir = inheritance_path.joinpath('This System')
     ac_2 = this_system_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
@@ -162,6 +185,13 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
     file = ac_2 / f'{expected_appliance_uuid}.md'
     with open(file, 'w') as f:
         f.write(inheritance_text_2)
+
+    ac_2a = this_system_dir.joinpath('ac-2_smt.a')
+    ac_2a.mkdir(parents=True)
+
+    file = ac_2a / f'{expected_appliance_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(unmapped_text)
 
     test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
 
@@ -183,6 +213,16 @@ def test_read_inheritance_markdown_dir_with_multiple_leveraged_components(tmp_tr
 
     assert len(inheritance_info[0]) == 2
     assert len(inheritance_info[1]) == 2
+
+    assert 'ac-2_smt.a' in markdown_dict
+    assert len(markdown_dict['ac-2_smt.a']) == 2
+
+    assert expected_appliance_uuid in markdown_dict['ac-2_smt.a']
+    inheritance_info = markdown_dict['ac-2_smt.a'][expected_appliance_uuid]
+
+    # Only leveraging from one component
+    assert len(inheritance_info[0]) == 1
+    assert len(inheritance_info[1]) == 1
 
 
 def test_get_leveraged_ssp_reference(tmp_trestle_dir: pathlib.Path) -> None:
@@ -242,3 +282,45 @@ def test_get_leveraged_components(tmp_trestle_dir: pathlib.Path) -> None:
     assert len(leveraged_components) == 2
     assert 'Access Control Appliance' in leveraged_components
     assert 'This System' in leveraged_components
+
+
+def test_update_type_with_by_comp(sample_implemented_requirement: ossp.ImplementedRequirement) -> None:
+    """Test update type with by component."""
+    test_ssp: ossp.SystemSecurityPlan = gens.generate_sample_model(ossp.SystemSecurityPlan)
+    reader = exportreader.ExportReader('', test_ssp)
+
+    test_inherited: ossp.Inherited = gens.generate_sample_model(ossp.Inherited)
+    test_satisfied: ossp.Satisfied = gens.generate_sample_model(ossp.Satisfied)
+
+    test_comp_uuid = str(uuid.uuid4())
+
+    test_by_comp_dict: exportreader.ByComponentDict = {test_comp_uuid: ([test_inherited], [test_satisfied])}
+
+    assert len(sample_implemented_requirement.by_components) == 1
+
+    reader._update_type_with_by_comp(sample_implemented_requirement, test_by_comp_dict)
+
+    # Ensure a new by_comp was added, but the original was not removed
+    assert len(sample_implemented_requirement.by_components) == 2
+
+    # Test update the existing without adding a new component
+    test_satisfied.description = 'Updated Description'
+    test_by_comp_dict: exportreader.ByComponentDict = {test_comp_uuid: ([test_inherited], [test_satisfied])}
+    reader._update_type_with_by_comp(sample_implemented_requirement, test_by_comp_dict)
+
+    assert len(sample_implemented_requirement.by_components) == 2
+    new_by_comp = sample_implemented_requirement.by_components[1]  # type: ignore
+
+    assert new_by_comp.component_uuid == test_comp_uuid
+    assert new_by_comp.satisfied is not None
+    assert new_by_comp.satisfied[0].description == 'Updated Description'
+
+    # Test removing the existing inheritance info
+    test_by_comp_dict: exportreader.ByComponentDict = {}
+    reader._update_type_with_by_comp(sample_implemented_requirement, test_by_comp_dict)
+
+    new_by_comp = sample_implemented_requirement.by_components[1]  # type: ignore
+
+    assert new_by_comp.component_uuid == test_comp_uuid
+    assert new_by_comp.satisfied is None
+    assert new_by_comp.inherited is None

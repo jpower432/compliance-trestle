@@ -682,42 +682,6 @@ def generate_test_by_comp() -> ssp.ByComponent:
     return by_comp
 
 
-class FileChecker:
-    """Check for changes in files after test operations."""
-
-    def __init__(self, root_dir: pathlib.Path) -> None:
-        """Initialize the class with the root directory."""
-        self._root_dir = root_dir
-        self._file_dict: Dict[pathlib.Path, str] = {}
-        for file in self._root_dir.rglob('*'):
-            if not file.is_dir():
-                self._file_dict[file] = file.read_text(encoding=const.FILE_ENCODING)
-
-    def files_unchanged(self) -> bool:
-        """Check if any files have changed."""
-        checked_files = []
-        for file in self._root_dir.rglob('*'):
-            if not file.is_dir():
-                if file not in self._file_dict:
-                    logger.error(f'Test file {file} is a new file that was not there originally.')
-                    return False
-                old_text = self._file_dict[file]
-                new_text = file.read_text(encoding=const.FILE_ENCODING)
-                if old_text != new_text:
-                    logger.error(f'Test file {file} has changed contents:')
-                    differ = difflib.Differ()
-                    diff = differ.compare(old_text.split('\n'), new_text.split('\n'))
-                    for line in diff:
-                        logger.error(line)
-                    return False
-                checked_files.append(file)
-        if len(checked_files) != len(self._file_dict):
-            missing = set(self._file_dict.keys()).difference(checked_files)
-            logger.error(f'Some files are missing: {missing}')
-            return False
-        return True
-
-
 def generate_test_inheritance_md(
     provided_uuid: str, responsibility_uuid: str, leveraged_statement_names: List[str], leveraged_ssp_href: str
 ) -> str:
@@ -764,3 +728,39 @@ resp statement description
 My Satisfied Description
     """
     return md_template
+
+
+class FileChecker:
+    """Check for changes in files after test operations."""
+
+    def __init__(self, root_dir: pathlib.Path) -> None:
+        """Initialize the class with the root directory."""
+        self._root_dir = root_dir
+        self._file_dict: Dict[pathlib.Path, str] = {}
+        for file in self._root_dir.rglob('*'):
+            if not file.is_dir():
+                self._file_dict[file] = file.read_text(encoding=const.FILE_ENCODING)
+
+    def files_unchanged(self) -> bool:
+        """Check if any files have changed."""
+        checked_files = []
+        for file in self._root_dir.rglob('*'):
+            if not file.is_dir():
+                if file not in self._file_dict:
+                    logger.error(f'Test file {file} is a new file that was not there originally.')
+                    return False
+                old_text = self._file_dict[file]
+                new_text = file.read_text(encoding=const.FILE_ENCODING)
+                if old_text != new_text:
+                    logger.error(f'Test file {file} has changed contents:')
+                    differ = difflib.Differ()
+                    diff = differ.compare(old_text.split('\n'), new_text.split('\n'))
+                    for line in diff:
+                        logger.error(line)
+                    return False
+                checked_files.append(file)
+        if len(checked_files) != len(self._file_dict):
+            missing = set(self._file_dict.keys()).difference(checked_files)
+            logger.error(f'Some files are missing: {missing}')
+            return False
+        return True
