@@ -60,8 +60,9 @@ def prep_dir(component_dir: pathlib.Path) -> None:
     with open(file, 'w') as f:
         f.write(inheritance_text)
 
+
 def unmapped_prep_dir(component_dir: pathlib.Path) -> None:
-    """unmapped prep dir."""
+    """Unmapped prep dir."""
     ac_2 = component_dir.joinpath('ac-2')
     ac_2.mkdir(parents=True)
 
@@ -83,8 +84,6 @@ def unmapped_prep_dir(component_dir: pathlib.Path) -> None:
     file = ac_2a / f'{expected_application_uuid}.md'
     with open(file, 'w') as f:
         f.write(unmapped_text)
-
-
 
 
 def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
@@ -172,5 +171,4 @@ def test_no_leveraged_comps(tmp_trestle_dir: pathlib.Path) -> None:
     ssp_inheritance_api = SSPInheritanceAPI(inheritance_path, tmp_trestle_dir)
     ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
 
-    assert orig_ssp.system_implementation.leveraged_authorizations is []
-
+    assert orig_ssp.system_implementation.leveraged_authorizations is None
