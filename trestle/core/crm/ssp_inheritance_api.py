@@ -99,7 +99,10 @@ class SSPInheritanceAPI():
             raise TrestleError(f'Unable to fetch ssp from {leveraged_ssp_reference}: {e}')
 
         link: common.Link = common.Link(href=leveraged_ssp_reference)
-        if reader.get_leveraged_components() is None:
+        leveraged_authz: ossp.LeveragedAuthorization
+        if reader.get_leveraged_components() is []:
+            print('No leveraged components mapped in inheritance view.')
+            leveraged_authz = {}
             logger.warn('No leveraged components mapped in inheritance view.')
         else:
             if (ssp.system_implementation.leveraged_authorizations is not None
@@ -116,7 +119,7 @@ class SSPInheritanceAPI():
 
             # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
             # coming from inheritance view
-            ssp.system_implementation.leveraged_authorizations = [leveraged_authz]
+        ssp.system_implementation.leveraged_authorizations = [leveraged_authz]
 
         # Reconcile the current leveraged components with the leveraged components in the inheritance view
         mapped_components: Dict[str, ossp.SystemComponent] = {}

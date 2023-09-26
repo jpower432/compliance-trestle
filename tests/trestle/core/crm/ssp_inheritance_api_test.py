@@ -69,7 +69,7 @@ def unmapped_prep_dir(component_dir: pathlib.Path) -> None:
         provided_uuid=example_provided_uuid,
         responsibility_uuid=example_responsibility_uuid,
         leveraged_statement_names=[const.REPLACE_ME],
-        leveraged_ssp_href='trestle://leveraged_ssp.json'
+        leveraged_ssp_href='trestle://system-security-plans/leveraged_ssp/system-security-plan.json'
     )
 
     file = ac_2 / f'{expected_application_uuid}.md'
@@ -172,5 +172,5 @@ def test_no_leveraged_comps(tmp_trestle_dir: pathlib.Path) -> None:
     ssp_inheritance_api = SSPInheritanceAPI(inheritance_path, tmp_trestle_dir)
     ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
 
-    assert orig_ssp.system_implementation.leveraged_authorizations is None
+    assert orig_ssp.system_implementation.leveraged_authorizations is []
 
