@@ -116,7 +116,7 @@ class SSPInheritanceAPI():
             # Set the title of the leveraged authorization
             leveraged_auth.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
             leveraged_auths.append(leveraged_auth)
-            # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
+        # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
             # coming from inheritance view
         ssp.system_implementation.leveraged_authorizations = none_if_empty(leveraged_auths)
 
