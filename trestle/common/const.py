@@ -352,6 +352,12 @@ NAMESPACE_FEDRAMP = 'https://fedramp.gov/ns/oscal'
 
 LEV_AUTH_UUID = 'leveraged-authorization-uuid'
 
+INHERITED_UUID = 'inherited-uuid'
+
+IMPLEMENTATION_POINT = 'implementation-point'
+
+IMPLEMENTATION_POINT_EXTERNAL = 'external'
+
 STATUS_INHERITED = 'inherited'
 
 STATUS_PARTIALLY_IMPLEMENTED = 'partially-implemented'
