@@ -23,7 +23,7 @@ import trestle.oscal.common as common
 import trestle.oscal.ssp as ossp
 from trestle.common import const
 from trestle.common.err import TrestleError
-from trestle.common.list_utils import as_list
+from trestle.common.list_utils import as_list, none_if_empty
 from trestle.core.catalog.catalog_api import CatalogAPI
 from trestle.core.crm.export_reader import ExportReader
 from trestle.core.crm.export_writer import ExportWriter
@@ -98,21 +98,32 @@ class SSPInheritanceAPI():
         except TrestleError as e:
             raise TrestleError(f'Unable to fetch ssp from {leveraged_ssp_reference}: {e}')
 
-        leveraged_authz = gens.generate_sample_model(ossp.LeveragedAuthorization)
-        leveraged_authz.links = as_list(leveraged_authz.links)
         link: common.Link = common.Link(href=leveraged_ssp_reference)
-        leveraged_authz.links.append(link)
+        leveraged_auths: List[ossp.LeveragedAuthorization] = []
+        leveraged_auth: ossp.LeveragedAuthorization = gens.generate_sample_model(ossp.LeveragedAuthorization)
+        leveraged_components: List[str] = reader.get_leveraged_components()
+        if not leveraged_components:
+            logger.warn(
+                'No leveraged components mapped in inheritance view.',
+                'No leveraged authorization will be added to the ssp'
+            )
+        else:
+            if self._is_present_in_ssp(ssp, link):
+                if ssp.system_implementation.leveraged_authorizations is not None:
+                    leveraged_auth = ssp.system_implementation.leveraged_authorizations[0]
+            else:
+                leveraged_auth.links = as_list(leveraged_auth.links)
+                leveraged_auth.links.append(link)
 
-        # Set the title of the leveraged authorization
-        leveraged_authz.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
-
+            # Set the title of the leveraged authorization
+            leveraged_auth.title = f'Leveraged Authorization for {leveraged_ssp.metadata.title}'
+            leveraged_auths.append(leveraged_auth)
         # Overwrite the leveraged authorization in the SSP. The only leveraged authorization should be the one
         # coming from inheritance view
-        ssp.system_implementation.leveraged_authorizations = [leveraged_authz]
+        ssp.system_implementation.leveraged_authorizations = none_if_empty(leveraged_auths)
 
         # Reconcile the current leveraged components with the leveraged components in the inheritance view
         mapped_components: Dict[str, ossp.SystemComponent] = {}
-        leveraged_components = reader.get_leveraged_components()
         for component in as_list(leveraged_ssp.system_implementation.components):
             if component.title in leveraged_components:
                 mapped_components[component.uuid] = component
@@ -133,14 +144,14 @@ class SSPInheritanceAPI():
             original_comp_uuid = props_dict[const.INHERITED_UUID]
             if original_comp_uuid in mapped_components:
                 original_component = mapped_components[original_comp_uuid]
-                self._update_leveraged_system_component(component, original_component, leveraged_authz.uuid)
+                self._update_leveraged_system_component(component, original_component, leveraged_auth.uuid)
                 new_components.append(component)
                 del mapped_components[original_comp_uuid]
 
         # Add any remaining components to the new components
         for component in mapped_components.values():
             new_component: ossp.SystemComponent = gens.generate_sample_model(ossp.SystemComponent)
-            self._update_leveraged_system_component(new_component, component, leveraged_authz.uuid)
+            self._update_leveraged_system_component(new_component, component, leveraged_auth.uuid)
             logger.debug(f'Adding component {new_component.title} to components.')
             new_components.append(new_component)
 
@@ -162,3 +173,11 @@ class SSPInheritanceAPI():
         )
         new_comp.props.append(common.Property(name=const.LEV_AUTH_UUID, value=leveraged_auth_id))
         new_comp.props.append(common.Property(name=const.INHERITED_UUID, value=original_comp.uuid))
+
+    def _is_present_in_ssp(self, ssp: ossp.SystemSecurityPlan, link: common.Link) -> bool:
+        if (ssp.system_implementation.leveraged_authorizations is not None
+                and ssp.system_implementation.leveraged_authorizations[0].links is not None
+                and ssp.system_implementation.leveraged_authorizations[0].links[0].href == link.href):
+            return True
+        else:
+            return False

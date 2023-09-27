@@ -61,6 +61,31 @@ def prep_dir(component_dir: pathlib.Path) -> None:
         f.write(inheritance_text)
 
 
+def unmapped_prep_dir(component_dir: pathlib.Path) -> None:
+    """Unmapped prep dir."""
+    ac_2 = component_dir.joinpath('ac-2')
+    ac_2.mkdir(parents=True)
+
+    unmapped_text = test_utils.generate_test_inheritance_md(
+        provided_uuid=example_provided_uuid,
+        responsibility_uuid=example_responsibility_uuid,
+        leveraged_statement_names=[const.REPLACE_ME],
+        leveraged_ssp_href='trestle://system-security-plans/leveraged_ssp/system-security-plan.json'
+    )
+
+    file = ac_2 / f'{expected_application_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(unmapped_text)
+
+    # test with a statement
+    ac_2a = component_dir.joinpath('ac-2_smt.a')
+    ac_2a.mkdir(parents=True)
+
+    file = ac_2a / f'{expected_application_uuid}.md'
+    with open(file, 'w') as f:
+        f.write(unmapped_text)
+
+
 def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
     """Test that a leveraged authorization is created."""
     inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
@@ -121,3 +146,29 @@ def test_update_ssp_inheritance(tmp_trestle_dir: pathlib.Path) -> None:
     copy_ssp = copy.deepcopy(orig_ssp)
     ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
     assert ModelUtils.models_are_equivalent(orig_ssp, copy_ssp)  # type: ignore
+
+
+def test_no_leveraged_comps(tmp_trestle_dir: pathlib.Path) -> None:
+    """Test that a leveraged authorization is not created."""
+    inheritance_path = tmp_trestle_dir.joinpath(leveraged_ssp, const.INHERITANCE_VIEW_DIR)
+    application_dir = inheritance_path.joinpath('Application')
+    unmapped_prep_dir(application_dir)
+
+    test_utils.load_from_json(tmp_trestle_dir, 'leveraged_ssp', leveraged_ssp, ossp.SystemSecurityPlan)
+    test_utils.load_from_json(tmp_trestle_dir, 'leveraging_ssp', leveraging_ssp, ossp.SystemSecurityPlan)
+
+    orig_ssp, _ = ModelUtils.load_model_for_class(
+        tmp_trestle_dir,
+        leveraging_ssp,
+        ossp.SystemSecurityPlan,
+        FileContentType.JSON)
+
+    components = orig_ssp.system_implementation.components
+
+    assert len(components) == 5
+    assert len(orig_ssp.system_implementation.leveraged_authorizations) == 1
+
+    ssp_inheritance_api = SSPInheritanceAPI(inheritance_path, tmp_trestle_dir)
+    ssp_inheritance_api.update_ssp_inheritance(orig_ssp)
+
+    assert orig_ssp.system_implementation.leveraged_authorizations is None
