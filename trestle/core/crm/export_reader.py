@@ -16,7 +16,7 @@
 import logging
 import os
 import pathlib
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 import trestle.core.generators as gens
 import trestle.oscal.ssp as ossp
@@ -55,9 +55,9 @@ class ExportReader:
             ssp: A system security plan object that will be updated with the inheritance information.
 
         Notes:
-            The mapped components list is used to track which components have been mapped to controls in the markdown.
-            It can be retrieved with the get_leveraged_components method. This will be empty until the
-            read_exports_from_markdown method is called.
+            The mapped components and authorizations list is used to track which components have been mapped to
+            controls in the markdown. It can be retrieved with the get_leveraged_components method.
+            This will be empty until the read_exports_from_markdown method is called.
         """
         self._ssp: ossp.SystemSecurityPlan = ssp
 
@@ -65,9 +65,15 @@ class ExportReader:
         self._implemented_requirements: Dict[str, ossp.ImplementedRequirement] = self._create_impl_req_dict()
 
         # List of component titles that have been mapped to controls in the Markdown
-        self._mapped_components: List[str] = []
+        self._mapped_components: Set[str] = set()
+        self._leveraged_authorizations: Set[str] = set()
 
         self._root_path: pathlib.Path = root_path
+
+        # Creating a dictionary to find the component uuid by title for faster lookup
+        self._uuid_by_title: Dict[str, str] = {}
+        for component in as_list(self._ssp.system_implementation.components):
+            self._uuid_by_title[component.title] = component.uuid
 
     def _create_impl_req_dict(self) -> Dict[str, ossp.ImplementedRequirement]:
         """Create a dictionary of implemented requirements keyed by control id."""
@@ -93,29 +99,13 @@ class ExportReader:
         self._ssp.control_implementation.implemented_requirements = list(self._implemented_requirements.values())
         return self._ssp
 
-    def get_leveraged_ssp_href(self) -> str:
-        """Get the href of the leveraged SSP from a markdown file."""
-        comp_dirs = os.listdir(self._root_path)
-        if len(comp_dirs) == 0:
-            raise TrestleError('No components were found in the markdown.')
-
-        control_dirs = os.listdir(self._root_path.joinpath(comp_dirs[0]))
-        if len(control_dirs) == 0:
-            raise TrestleError('No controls were found in the markdown for component {comp_dirs[0]}.')
-
-        control_dir = self._root_path.joinpath(comp_dirs[0], control_dirs[0])
-
-        files = [f for f in os.listdir(control_dir) if os.path.isfile(os.path.join(control_dir, f))]
-        if len(files) == 0:
-            raise TrestleError(f'No files were found in the markdown for control {control_dirs[0]}.')
-
-        markdown_file_path = control_dir.joinpath(files[0])
-        reader = InheritanceMarkdownReader(markdown_file_path)
-        return reader.get_leveraged_ssp_reference()
+    def get_leveraged_authorizations(self) -> List[str]:
+        """Get a list of authorization titles that have been mapped to controls in the Markdown."""
+        return list(self._leveraged_authorizations)
 
     def get_leveraged_components(self) -> List[str]:
         """Get a list of component titles that have been mapped to controls in the Markdown."""
-        return self._mapped_components
+        return list(self._mapped_components)
 
     def _merge_exports_implemented_requirements(self, markdown_dict: InheritanceViewDict) -> None:
         """Merge all exported inheritance info from the markdown into the implemented requirement dict."""
@@ -211,57 +201,60 @@ class ExportReader:
             new_by_comp.append(by_comp)
         return new_by_comp
 
+    def _read_comp_from_markdown(
+        self, markdown_dict: InheritanceViewDict, control_dir_path: pathlib.Path, control_id: str
+    ) -> ByComponentDict:
+        # Initialize the by_component dictionary for the control directory
+        # If it exists in the markdown dictionary, then update it with the new information
+        by_comp_dict = markdown_dict.get(control_id, {})
+
+        for file in os.listdir(control_dir_path):
+            file_path = pathlib.Path(control_dir_path).joinpath(file)
+            reader = InheritanceMarkdownReader(file_path)
+            leveraged_info = reader.process_leveraged_statement_markdown()
+
+            # If there is no leveraged information, then skip this file
+            if leveraged_info is None:
+                continue
+
+            # Add the leveraged authorization to the list only if there is leveraged information
+            self._leveraged_authorizations.add(reader.get_leveraged_ssp_reference())
+
+            for comp in leveraged_info.leveraging_comp_titles:
+                if comp not in self._uuid_by_title:
+                    keys_as_string = ', '.join(self._uuid_by_title.keys())
+                    raise TrestleError(
+                        f'Component "{comp}" does not exist in the {self._ssp.metadata.title} SSP. '
+                        f'Please use options: {keys_as_string}.'
+                    )
+
+                comp_uuid = self._uuid_by_title[comp]
+                inherited, satisfied = by_comp_dict.get(comp_uuid, ([], []))
+
+                if leveraged_info.inherited is not None:
+                    inherited.append(leveraged_info.inherited)
+                if leveraged_info.satisfied is not None:
+                    satisfied.append(leveraged_info.satisfied)
+
+                by_comp_dict[comp_uuid] = (inherited, satisfied)
+        return by_comp_dict
+
     def _read_inheritance_markdown_directory(self) -> InheritanceViewDict:
         """Read all inheritance markdown files and return a dictionary of all the information."""
         markdown_dict: InheritanceViewDict = {}
-
-        # Creating a dictionary to find the component uuid by title for faster lookup
-        uuid_by_title: Dict[str, str] = {}
-        for component in as_list(self._ssp.system_implementation.components):
-            uuid_by_title[component.title] = component.uuid
 
         for comp_dir in os.listdir(self._root_path):
             is_comp_leveraged = False
             for control_dir in os.listdir(os.path.join(self._root_path, comp_dir)):
                 control_dir_path = os.path.join(self._root_path, comp_dir, control_dir)
 
-                # Initialize the by_component dictionary for the control directory
-                # If it exists in the markdown dictionary, then update it with the new information
-                by_comp_dict = markdown_dict.get(control_dir, {})
-
-                for file in os.listdir(control_dir_path):
-                    file_path = pathlib.Path(control_dir_path).joinpath(file)
-                    reader = InheritanceMarkdownReader(file_path)
-                    leveraged_info = reader.process_leveraged_statement_markdown()
-
-                    # If there is no leveraged information, then skip this file
-                    if leveraged_info is None:
-                        continue
-
-                    # If a file has leveraged information, then set the flag to indicate the component is leveraged
+                by_comp_dict = self._read_comp_from_markdown(markdown_dict, control_dir_path, control_dir)
+                if by_comp_dict:
                     is_comp_leveraged = True
-
-                    for comp in leveraged_info.leveraging_comp_titles:
-                        if comp not in uuid_by_title:
-                            keys_as_string = ', '.join(uuid_by_title.keys())
-                            raise TrestleError(
-                                f'Component "{comp}" does not exist in the {self._ssp.metadata.title} SSP. '
-                                f'Please use options: {keys_as_string}.'
-                            )
-
-                        comp_uuid = uuid_by_title[comp]
-                        inherited, satisfied = by_comp_dict.get(comp_uuid, ([], []))
-
-                        if leveraged_info.inherited is not None:
-                            inherited.append(leveraged_info.inherited)
-                        if leveraged_info.satisfied is not None:
-                            satisfied.append(leveraged_info.satisfied)
-
-                        by_comp_dict[comp_uuid] = (inherited, satisfied)
 
                 markdown_dict[control_dir] = by_comp_dict
 
             if is_comp_leveraged:
-                self._mapped_components.append(comp_dir)
+                self._mapped_components.add(comp_dir)
 
         return markdown_dict

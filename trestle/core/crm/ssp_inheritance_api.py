@@ -41,36 +41,37 @@ class SSPInheritanceAPI():
         self._trestle_root: pathlib.Path = trestle_root
 
     def write_inheritance_as_markdown(
-        self, leveraged_ssp_reference: str, catalog_api: Optional[CatalogAPI] = None
+        self, leveraged_ssp_references: List[str], catalog_api: Optional[CatalogAPI] = None
     ) -> None:
         """
         Write inheritance information to markdown.
 
         Args:
-            leveraged_ssp_reference: Location of the SSP to write inheritance information from.
+            leveraged_ssp_references: Location of the SSPs to write inheritance information from.
             catalog_api: Catalog API to filter inheritance information by catalog.
 
         Notes:
             If a catalog API is provided, the written controls in the markdown will be filtered by the catalog.
         """
-        leveraged_ssp: ossp.SystemSecurityPlan = self._fetch_leveraged_ssp(leveraged_ssp_reference)
+        for leveraged_ssp_ref in leveraged_ssp_references:
+            leveraged_ssp: ossp.SystemSecurityPlan = self._fetch_leveraged_ssp(leveraged_ssp_ref)
 
-        if catalog_api is not None:
-            control_imp: ossp.ControlImplementation = leveraged_ssp.control_implementation
+            if catalog_api is not None:
+                control_imp: ossp.ControlImplementation = leveraged_ssp.control_implementation
 
-            new_imp_requirements: List[ossp.ImplementedRequirement] = []
-            for imp_requirement in as_list(control_imp.implemented_requirements):
-                control = catalog_api._catalog_interface.get_control(imp_requirement.control_id)
-                if control is not None:
-                    new_imp_requirements.append(imp_requirement)
-            control_imp.implemented_requirements = new_imp_requirements
+                new_imp_requirements: List[ossp.ImplementedRequirement] = []
+                for imp_requirement in as_list(control_imp.implemented_requirements):
+                    control = catalog_api._catalog_interface.get_control(imp_requirement.control_id)
+                    if control is not None:
+                        new_imp_requirements.append(imp_requirement)
+                control_imp.implemented_requirements = new_imp_requirements
 
-            leveraged_ssp.control_implementation = control_imp
+                leveraged_ssp.control_implementation = control_imp
 
-        export_writer: ExportWriter = ExportWriter(
-            self._inheritance_markdown_path, leveraged_ssp, leveraged_ssp_reference
-        )
-        export_writer.write_exports_as_markdown()
+            export_writer: ExportWriter = ExportWriter(
+                self._inheritance_markdown_path, leveraged_ssp, leveraged_ssp_ref
+            )
+            export_writer.write_exports_as_markdown()
 
     def update_ssp_inheritance(self, ssp: ossp.SystemSecurityPlan) -> None:
         """
@@ -83,15 +84,15 @@ class SSPInheritanceAPI():
         reader = ExportReader(self._inheritance_markdown_path, ssp)
         ssp = reader.read_exports_from_markdown()
 
-        leveraged_ssp_reference = reader.get_leveraged_ssp_href()
-
-        leveraged_ssp: ossp.SystemSecurityPlan = self._fetch_leveraged_ssp(leveraged_ssp_reference)
-
-        link: common.Link = common.Link(href=leveraged_ssp_reference)
         leveraged_auths: List[ossp.LeveragedAuthorization] = []
-        leveraged_auth: ossp.LeveragedAuthorization = gens.generate_sample_model(ossp.LeveragedAuthorization)
-        leveraged_components: List[str] = reader.get_leveraged_components()
+        leveraged_ssp_references: List[str] = reader.get_leveraged_authorizations()
+        for leveraged_ssp_reference in leveraged_ssp_references:
+            leveraged_ssp: ossp.SystemSecurityPlan = self._fetch_leveraged_ssp(leveraged_ssp_reference)
+            link: common.Link = common.Link(href=leveraged_ssp_reference)
+            leveraged_auth: ossp.LeveragedAuthorization = gens.generate_sample_model(ossp.LeveragedAuthorization)
 
+        # Change this. Need to conditionally add the link to the leveraged authorization based which one is utilized
+        leveraged_components: List[str] = reader.get_leveraged_components()
         if not leveraged_components:
             logger.warn(
                 'No leveraged components mapped to the SSP. '
